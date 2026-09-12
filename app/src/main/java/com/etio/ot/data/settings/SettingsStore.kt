@@ -2,6 +2,7 @@ package com.etio.ot.data.settings
 
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -38,8 +39,23 @@ class SettingsStore(private val context: Context) {
         context.etioDataStore.edit { it[KEY_TUTORIAL] = completed }
     }
 
+    /**
+     * Splash length override, in milliseconds. Null means use the built-in constant.
+     *
+     * Here rather than in a build constant because the one moment you want it shorter
+     * is the one moment you cannot rebuild: standing at the podium, about to present.
+     */
+    val splashDurationMs: Flow<Long?> = context.etioDataStore.data.map { it[KEY_SPLASH_MS] }
+
+    suspend fun setSplashDurationMs(ms: Long?) {
+        context.etioDataStore.edit { prefs ->
+            if (ms == null) prefs.remove(KEY_SPLASH_MS) else prefs[KEY_SPLASH_MS] = ms
+        }
+    }
+
     private companion object {
         val KEY_THEME = stringPreferencesKey("theme_mode")
         val KEY_TUTORIAL = booleanPreferencesKey("tutorial_completed")
+        val KEY_SPLASH_MS = longPreferencesKey("splash_duration_ms")
     }
 }

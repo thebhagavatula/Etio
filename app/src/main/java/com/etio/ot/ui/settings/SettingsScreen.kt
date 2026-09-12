@@ -53,6 +53,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory),
 ) {
     val mode by viewModel.themeMode.collectAsStateWithLifecycle(ThemeMode.SYSTEM)
+    val splashOverride by viewModel.splashDurationMs.collectAsStateWithLifecycle(initialValue = null)
     var confirmReplay by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -117,7 +118,10 @@ fun SettingsScreen(
 
             Spacer(Modifier.height(Etio.space.xl))
             SectionLabel("Diagnostics")
-            DiagnosticsSection()
+            DiagnosticsSection(
+                splashDurationMs = splashOverride,
+                onSplashDurationChange = viewModel::setSplashDurationMs,
+            )
             Spacer(Modifier.height(Etio.space.xxl))
         }
     }

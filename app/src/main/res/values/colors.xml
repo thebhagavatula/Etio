@@ -7,4 +7,9 @@
     <color name="etio_amber">#FFE8A33D</color>
     <color name="etio_slate">#FF14181F</color>
     <color name="etio_on_slate">#FFECEFF4</color>
+
+    <!-- Pre-Compose splash window. Light here, dark in values-night, so the handoff
+         to the Compose splash is not a flash of the wrong ground. -->
+    <color name="etio_splash_bg">#FFF7F9FB</color>
+    <color name="etio_splash_icon_bg">#FFF7F9FB</color>
 </resources>

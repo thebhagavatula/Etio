@@ -18,8 +18,14 @@ import com.etio.ot.data.settings.ThemeMode
 import com.etio.ot.di.CoreModule
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.etio.ot.ui.EtioApp
+import com.etio.ot.ui.splash.SplashScreen
+import com.etio.ot.ui.splash.SplashTiming
 import com.etio.ot.ui.tutorial.TutorialHost
 import com.etio.ot.ui.theme.EtioTheme
+import com.etio.ot.di.AiModule
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 
 class MainActivity : ComponentActivity() {
 
@@ -51,15 +57,27 @@ class MainActivity : ComponentActivity() {
             val tutorialDone by CoreModule.settingsStore.tutorialCompleted
                 .collectAsStateWithLifecycle(initialValue = null as Boolean?)
 
+            val splashOverride by CoreModule.settingsStore.splashDurationMs
+                .collectAsStateWithLifecycle(initialValue = null)
+            var splashDone by remember { mutableStateOf(false) }
+
             EtioTheme(darkTheme = dark) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    when (tutorialDone) {
-                        null -> Unit
-                        false -> TutorialHost(onFinished = { })
-                        true -> EtioApp()
+                    when {
+                        // The splash is where the model loads. Warm-up is handed in
+                        // rather than started here, so the splash owns when it runs
+                        // and nothing animates over the top of it.
+                        !splashDone -> SplashScreen(
+                            onDone = { splashDone = true },
+                            durationMs = SplashTiming.sanitise(splashOverride),
+                            warmUp = { AiModule.llmEngine.warmUp() },
+                        )
+                        tutorialDone == null -> Unit
+                        tutorialDone == false -> TutorialHost(onFinished = { })
+                        else -> EtioApp()
                     }
                 }
             }

@@ -1,5 +1,6 @@
 package com.etio.ot.ui.settings
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,7 +31,10 @@ import kotlin.math.roundToInt
  * nothing here writes to the record.
  */
 @Composable
-fun DiagnosticsSection() {
+fun DiagnosticsSection(
+    splashDurationMs: Long? = null,
+    onSplashDurationChange: (Long?) -> Unit = {},
+) {
     val t by InferenceTelemetry.snapshot.collectAsStateWithLifecycle()
 
     Surface(
@@ -69,7 +73,47 @@ fun DiagnosticsSection() {
             )
             Stat("Parse retries", "${t.parseRetries}")
             Stat("Fell back to OTHER", "${t.parseFallbacks}")
+
+            Spacer(Modifier.height(Etio.space.s))
+
+            // The one moment you want the splash shorter is the one moment you cannot
+            // rebuild: standing at the podium about to present.
+            Text(
+                "Splash duration",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Etio.colors.textSecondary,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(Etio.space.s)) {
+                SplashOption("Default", splashDurationMs == null) { onSplashDurationChange(null) }
+                listOf(0L, 1500L, 2800L, 5000L).forEach { ms ->
+                    SplashOption(
+                        label = if (ms == 0L) "Off" else "${ms / 1000.0}s",
+                        selected = splashDurationMs == ms,
+                    ) { onSplashDurationChange(ms) }
+                }
+            }
+            Text(
+                "Applies on next launch. The splash is also tap-to-skip.",
+                style = MaterialTheme.typography.labelSmall,
+                color = Etio.colors.textSecondary,
+            )
         }
+    }
+}
+
+@Composable
+private fun SplashOption(label: String, selected: Boolean, onClick: () -> Unit) {
+    Surface(
+        color = if (selected) Etio.colors.accent.copy(alpha = 0.18f) else Etio.colors.background,
+        shape = RoundedCornerShape(Etio.radius.pill),
+        modifier = Modifier.clickable(onClick = onClick),
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelLarge,
+            color = if (selected) Etio.colors.accent else Etio.colors.textSecondary,
+            modifier = Modifier.padding(horizontal = Etio.space.m, vertical = Etio.space.s),
+        )
     }
 }
 

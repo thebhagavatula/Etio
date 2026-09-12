@@ -7,7 +7,7 @@
          minSdk 26, so this looks the same on every device Etio runs on. Reuses
          the adaptive icon's foreground layer — one glyph, one place it's drawn. -->
     <style name="Theme.Etio.Splash" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/etio_slate</item>
+        <item name="windowSplashScreenBackground">@color/etio_splash_bg</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
         <item name="postSplashScreenTheme">@style/Theme.Etio</item>
     </style>

@@ -14,6 +14,12 @@ class SettingsViewModel(
 
     val themeMode = settings.themeMode
 
+    val splashDurationMs = settings.splashDurationMs
+
+    fun setSplashDurationMs(ms: Long?) {
+        viewModelScope.launch { settings.setSplashDurationMs(ms) }
+    }
+
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch { settings.setThemeMode(mode) }
     }
