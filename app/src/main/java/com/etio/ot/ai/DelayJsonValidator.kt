@@ -58,7 +58,10 @@ object DelayJsonValidator {
     private val SPOKEN_DURATION = Regex(
         """\b\d{1,3}\s*(?:-|\s)?\s*(?:min|mins|minute|minutes|m|hour|hours|hr|hrs)\b""" +
             """|\b(?:$NUM_WORD)(?:[\s-](?:$NUM_WORD))?\s*(?:min|mins|minute|minutes|hour|hours|hr|hrs)\b""" +
-            """|\b(?:half an hour|an hour|one hour|two hours|hour and a half|quarter of an hour)\b""",
+            // Fractional hours are spoken, not counted: "another half hour" is the most
+            // common way an overrun gets quoted, and it carries no digit and no numeral.
+            """|\b(?:half[\s-]?(?:an[\s-])?hour|an?[\s-]hour|quarter[\s-]of[\s-]an[\s-]hour""" +
+            """|hour[\s-]and[\s-]a[\s-]half)\b""",
         RegexOption.IGNORE_CASE,
     )
 
