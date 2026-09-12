@@ -61,6 +61,7 @@ import com.etio.ot.data.model.EventType
 import com.etio.ot.ui.checklist.ChecklistHost
 import com.etio.ot.ui.events.EventGrid
 import com.etio.ot.ui.theme.Etio
+import com.etio.ot.ui.theme.EtioStatus
 import com.etio.ot.ui.theme.backdropBlur
 import com.etio.ot.ui.theme.glass
 import com.etio.ot.ui.theme.rememberEtioHaptics
@@ -84,7 +85,7 @@ private fun VarianceChip(varianceMin: Int, modifier: Modifier = Modifier) {
         else -> Etio.colors.delay
     }
     Surface(
-        color = tint.copy(alpha = 0.16f),
+        color = EtioStatus.tintFor(tint),
         shape = RoundedCornerShape(Etio.radius.pill),
         modifier = modifier,
     ) {

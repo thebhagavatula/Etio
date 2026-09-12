@@ -43,6 +43,19 @@ data class EtioColors(
     val running: Color,
     val warning: Color,
     val delay: Color,
+    /**
+     * Chip and banner grounds, opaque and chosen, not a status hue at 16% alpha.
+     *
+     * Deriving them by alpha was the bug: a hue composited over a warm ground keeps
+     * its own temperature, so a cool green went mint on beige and the chip read as
+     * borrowed from another app. These are picked against the ground they sit on, and
+     * checked for contrast with the hue that sits on THEM — which alpha-derived tints
+     * never were.
+     */
+    val runningTint: Color,
+    val warningTint: Color,
+    val delayTint: Color,
+    val accentTint: Color,
     /** WHO checklist only. If this appears anywhere else, that is a bug. */
     val safety: Color,
     val isDark: Boolean,
@@ -62,9 +75,15 @@ val DarkEtioColors = EtioColors(
     textPrimary = Color(0xFFEBC96A),
     textSecondary = Color(0xFFC0A48C),
     accent = Color(0xFFE5A94A),
-    running = Color(0xFF5FC98A),
+    // Warmed toward olive so "on time" belongs to a gold palette instead of reading
+    // as a stray mint from the old blue-grey one. Still unmistakably green.
+    running = Color(0xFF8FCE6A),
     warning = Color(0xFFF0B44A),
     delay = Color(0xFFE8796F),
+    runningTint = Color(0xFF2A3119),
+    warningTint = Color(0xFF352815),
+    delayTint = Color(0xFF35201C),
+    accentTint = Color(0xFF332714),
     safety = Color(0xFFC9A6F0),
     isDark = true,
 )
@@ -96,9 +115,16 @@ val LightEtioColors = EtioColors(
     accent = Color(0xFF8A5A1B),
     // Warmed toward the ground so the status hues belong to this palette rather than
     // looking borrowed from the old blue one, and re-measured after warming.
-    running = Color(0xFF2F6B43),
+    // Olive rather than forest: #2F6B43 sits at hue 150 and stayed cool however it
+    // was tinted, which is why the on-time chip read mint against the beige. This is
+    // hue 88 — still green, and at home on a warm ground.
+    running = Color(0xFF4F6B2F),
     warning = Color(0xFF8A5A00),
     delay = Color(0xFFA33228),
+    runningTint = Color(0xFFE4E6D2),
+    warningTint = Color(0xFFF3E4C6),
+    delayTint = Color(0xFFF1DCD4),
+    accentTint = Color(0xFFEFE3CE),
     safety = Color(0xFF6B4A9E),
     isDark = false,
 )
@@ -263,6 +289,27 @@ object Etio {
  * card cannot drift apart.
  */
 object EtioStatus {
+
+    /**
+     * The chip ground that belongs with a status hue.
+     *
+     * Call sites pick a hue for meaning and then need somewhere to put it; without
+     * this they reach for `.copy(alpha = ...)`, which is how the temperature drifted
+     * in the first place. Anything unrecognised falls back to the plain surface
+     * rather than inventing a tint.
+     */
+    @Composable
+    @ReadOnlyComposable
+    fun tintFor(status: Color): Color = with(Etio.colors) {
+        when (status) {
+            running -> runningTint
+            warning -> warningTint
+            delay -> delayTint
+            accent -> accentTint
+            else -> surface
+        }
+    }
+
     val onTime: Color @Composable @ReadOnlyComposable get() = Etio.colors.running
     val warning: Color @Composable @ReadOnlyComposable get() = Etio.colors.warning
     val late: Color @Composable @ReadOnlyComposable get() = Etio.colors.delay

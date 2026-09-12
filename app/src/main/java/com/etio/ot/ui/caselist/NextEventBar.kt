@@ -67,7 +67,7 @@ fun NextEventBar(
             // next patient. One tap answers it; dismissing leaves the list untouched.
             sendForLabel?.let { label ->
                 Surface(
-                    color = Etio.colors.warning.copy(alpha = 0.16f),
+                    color = Etio.colors.warningTint,
                     shape = RoundedCornerShape(Etio.radius.pill),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -144,7 +144,7 @@ fun NextEventBar(
 
                 // Same height as the primary action, same thumb arc.
                 Surface(
-                    color = Etio.colors.accent.copy(alpha = 0.16f),
+                    color = Etio.colors.accentTint,
                     shape = RoundedCornerShape(Etio.radius.pill),
                     modifier = Modifier
                         .size(PRIMARY_HEIGHT)

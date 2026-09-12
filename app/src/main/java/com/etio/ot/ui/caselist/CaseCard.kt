@@ -255,7 +255,7 @@ private fun DelayPill(record: DelayRecordEntity, onClick: () -> Unit) {
         else -> Etio.colors.warning
     }
     Surface(
-        color = tint.copy(alpha = 0.16f),
+        color = EtioStatus.tintFor(tint),
         shape = RoundedCornerShape(Etio.radius.pill),
         modifier = Modifier.clickable(onClick = onClick),
     ) {
@@ -279,7 +279,7 @@ private fun AssumedEventChip(
     onDismiss: () -> Unit,
 ) {
     Surface(
-        color = Etio.colors.warning.copy(alpha = 0.16f),
+        color = Etio.colors.warningTint,
         shape = RoundedCornerShape(Etio.radius.pill),
         modifier = Modifier.fillMaxWidth(),
     ) {

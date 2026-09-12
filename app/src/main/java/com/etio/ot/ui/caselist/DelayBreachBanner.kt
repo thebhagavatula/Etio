@@ -18,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import com.etio.ot.ui.theme.Etio
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -43,7 +44,7 @@ fun DelayBreachBanner(
     val haptics = LocalHapticFeedback.current
 
     Surface(
-        color = MaterialTheme.colorScheme.error.copy(alpha = 0.16f),
+        color = Etio.colors.delayTint,
         modifier = modifier.fillMaxWidth(),
     ) {
         Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {

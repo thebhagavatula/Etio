@@ -121,7 +121,7 @@ fun DiagnosticsSection(
 @Composable
 private fun SplashOption(label: String, selected: Boolean, onClick: () -> Unit) {
     Surface(
-        color = if (selected) Etio.colors.accent.copy(alpha = 0.18f) else Etio.colors.background,
+        color = if (selected) Etio.colors.accentTint else Etio.colors.background,
         shape = RoundedCornerShape(Etio.radius.pill),
         modifier = Modifier.clickable(onClick = onClick),
     ) {

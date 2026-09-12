@@ -85,6 +85,37 @@ check("hero surface", dhero, DARK_ROLES)
 for label, alpha in (("glass 72% (blurred)", 0.72), ("glass 92% (flat)", 0.92)):
     check(f"{label} over espresso", blend(dhero, dbg, alpha), DARK_ROLES)
 
+# Chips and banners: the status hue sitting on its own designed ground. These were
+# never checked while the tints were derived with .copy(alpha = ...) — the ground
+# depended on whatever happened to be behind it, so there was nothing fixed to
+# measure against. Opaque tints make it checkable, so check it.
+print()
+print("=== CHIPS — status hue on its own tint ===")
+LIGHT_CHIPS = [
+    ("running", "4F6B2F", "E4E6D2"),
+    ("warning", "8A5A00", "F3E4C6"),
+    ("delay", "A33228", "F1DCD4"),
+    ("accent", "8A5A1B", "EFE3CE"),
+]
+DARK_CHIPS = [
+    ("running", "8FCE6A", "2A3119"),
+    ("warning", "F0B44A", "352815"),
+    ("delay", "E8796F", "35201C"),
+    ("accent", "E5A94A", "332714"),
+]
+for theme, chips, ground in (("light", LIGHT_CHIPS, lbg), ("dark", DARK_CHIPS, dbg)):
+    print(f"  {theme}")
+    for name, fg, tint in chips:
+        r = ratio(fg, tint)
+        sep = ratio(tint, ground)
+        if r < AA:
+            failures += 1
+        # The chip also has to be visible AS a chip. Same value as the page behind it
+        # and it is just text with extra padding.
+        flag = "PASS" if r >= AA else "** FAIL **"
+        seen = "visible" if sep >= 1.08 else "** invisible vs ground **"
+        print(f"     {name:8s} #{fg} on #{tint}  {r:5.2f}:1  {flag}   vs ground {sep:4.2f} {seen}")
+
 print()
 if failures:
     raise SystemExit(f"{failures} role/ground combination(s) below {AA}:1 — fix before shipping.")

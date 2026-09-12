@@ -99,7 +99,7 @@ fun DelayReviewCard(
 
         if (record.fellBackToOther) {
             Surface(
-                color = Etio.colors.delay.copy(alpha = 0.16f),
+                color = Etio.colors.delayTint,
                 shape = RoundedCornerShape(Etio.radius.pill),
                 modifier = Modifier.fillMaxWidth(),
             ) {

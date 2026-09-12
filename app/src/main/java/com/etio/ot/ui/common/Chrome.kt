@@ -152,7 +152,7 @@ fun BlockedState(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(Etio.colors.warning.copy(alpha = 0.12f), RoundedCornerShape(Etio.radius.row))
+            .background(Etio.colors.warningTint, RoundedCornerShape(Etio.radius.row))
             .padding(Etio.space.l),
     ) {
         Text(
