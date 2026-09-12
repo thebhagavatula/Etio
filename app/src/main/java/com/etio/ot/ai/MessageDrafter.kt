@@ -56,7 +56,7 @@ class MessageDrafter(
         val cfg = prompts.drafting
         val rule = cfg.audiences[audience.name]
 
-        return buildString {
+        val userContent = buildString {
             appendLine(prompts.systemPrefix)
             appendLine()
             appendLine(cfg.instruction)
@@ -79,13 +79,12 @@ class MessageDrafter(
             appendLine("- Cause: ${record.code.display}")
             appendLine("- Department: ${record.attributedDept}")
             appendLine("- Detail: ${record.note}")
-            appendLine(
+            append(
                 "- Expected delay: " +
                     (record.estimatedMin?.let { "$it minutes" } ?: "not stated — do not invent a number"),
             )
-            appendLine()
-            append("Message for ${audience.display}:")
         }
+        return GemmaChatTemplate.wrap(userContent, modelPrefix = "Message for ${audience.display}:")
     }
 
     /** Used only when inference fails. Deterministic, obviously templated, never blank. */
