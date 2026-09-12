@@ -18,23 +18,52 @@ class DelayClassifier(
     private val config: PromptSource,
 ) {
 
+    /**
+     * Classify one utterance. Two inference calls at most, and the second one is
+     * invisible: a model that returns prose instead of JSON usually returns JSON when
+     * asked a second time with the instruction restated last, and a coordinator who
+     * waited three seconds would rather wait six than correct a wrong record by hand.
+     *
+     * Beyond that we stop. A third attempt is a worse use of the time than handing her
+     * an OTHER with her own words in the note and letting her fix it in two taps.
+     */
     suspend fun classify(transcript: String): DelayJsonValidator.Parsed {
-        val cfg = config.prompts()
-        val profile = profile()
+        // Null means the engine itself failed, which a retry cannot help: it fails the
+        // same way a second later, and spending another three seconds proving that is
+        // three seconds she is standing in front of a screen that says nothing.
+        val first = attempt(transcript, retry = false)
+            ?: return DelayJsonValidator.parse("", transcript)
+        if (!first.parseFailed) return first
 
+        InferenceTelemetry.parseRetry()
+        Log.w(TAG, "Job 1 returned no usable JSON; retrying once")
+
+        val second = attempt(transcript, retry = true)
+            ?: return DelayJsonValidator.parse("", transcript)
+        if (!second.parseFailed) return second
+
+        InferenceTelemetry.parseFallback()
+        Log.w(TAG, "Job 1 retry also unusable; falling back to OTHER")
+        return second
+    }
+
+    /** Null when the engine call itself failed, as opposed to returning unusable text. */
+    private suspend fun attempt(transcript: String, retry: Boolean): DelayJsonValidator.Parsed? {
+        val cfg = config.prompts()
         val started = System.currentTimeMillis()
+
         val raw = engine.generate(
-            profile = profile,
+            profile = profile(),
             stablePrefix = stablePrefix(),
-            variableSuffix = variableSuffix(transcript),
+            variableSuffix = variableSuffix(transcript, terse = retry),
             maxTokens = cfg.classification.maxTokens,
         ).getOrElse {
-            Log.e(TAG, "Job 1 inference failed", it)
-            // Inference failure is not a user-visible error — it is an OTHER we ask
+            // Not a user-visible error — the caller turns this into an OTHER we ask
             // the coordinator to correct.
-            return DelayJsonValidator.parse("", transcript)
+            Log.e(TAG, "Job 1 inference failed", it)
+            return null
         }
-        Log.i(TAG, "Job 1 in ${System.currentTimeMillis() - started}ms")
+        Log.i(TAG, "Job 1${if (retry) " (retry)" else ""} in ${System.currentTimeMillis() - started}ms")
 
         return DelayJsonValidator.parse(raw, transcript)
     }
@@ -80,8 +109,19 @@ class DelayClassifier(
     }
 
     /** The one thing that changes per call. */
-    fun variableSuffix(transcript: String): String =
-        GemmaChatTemplate.tail("\n\nCoordinator: ${transcript.trim()}", modelPrefix = "JSON:")
+    /**
+     * [terse] is the retry form: the same utterance with the format demand repeated
+     * immediately before generation, which is where a 1B model is most likely to still
+     * be holding it. The prefix is untouched, so the retry reuses the same primed cache.
+     */
+    fun variableSuffix(transcript: String, terse: Boolean = false): String {
+        val body = buildString {
+            append("\n\nCoordinator: ")
+            append(transcript.trim())
+            if (terse) append("\n\nRespond with JSON only.")
+        }
+        return GemmaChatTemplate.tail(body, modelPrefix = "JSON:")
+    }
 
     private companion object { const val TAG = "DelayClassifier" }
 }

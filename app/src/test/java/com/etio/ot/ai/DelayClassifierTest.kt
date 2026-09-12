@@ -167,4 +167,46 @@ class DelayClassifierTest {
         assertEquals(fakePrompts().classification.temperature, profile.temperature, 0.0001f)
         assertEquals(fakePrompts().classification.topK, profile.topK)
     }
+
+    @Test
+    fun `unparseable output is retried once, silently, and the retry is terser`() = runTest {
+        engine.queueSuccess("Sure! Here is what I think happened on that case.")
+        engine.queueSuccess("""{"code":"SURGEON_LATE","attributed_dept":"Surgery","note":"still in OPD"}""")
+
+        val parsed = classifier.classify("sir is still in OPD")
+
+        assertEquals(2, engine.calls.size)
+        assertEquals(DelayCode.SURGEON_LATE, parsed.code)
+        assertFalse("a successful retry is not a fallback", parsed.fellBack)
+        // The retry restates the demand last, where a small model is still holding it.
+        assertFalse(engine.calls[0].variableSuffix.contains("Respond with JSON only."))
+        assertTrue(engine.calls[1].variableSuffix.contains("Respond with JSON only."))
+        // ...and reuses the same primed cache rather than rebuilding it.
+        assertEquals(engine.calls[0].stablePrefix, engine.calls[1].stablePrefix)
+    }
+
+    @Test
+    fun `two unparseable replies fall back to OTHER and stop there`() = runTest {
+        engine.queueSuccess("I'm not sure I follow.")
+        engine.queueSuccess("Still not JSON, sorry.")
+
+        val parsed = classifier.classify("something odd happened")
+
+        assertEquals("must not spend a third inference", 2, engine.calls.size)
+        assertEquals(DelayCode.OTHER, parsed.code)
+        assertEquals("something odd happened", parsed.note)
+        assertTrue(parsed.fellBack)
+    }
+
+    @Test
+    fun `an engine failure is not retried`() = runTest {
+        engine.queueFailure()
+
+        val parsed = classifier.classify("set came back wet")
+
+        // A retry cannot help a call that never reached the model.
+        assertEquals(1, engine.calls.size)
+        assertEquals(DelayCode.OTHER, parsed.code)
+        assertTrue(parsed.fellBack)
+    }
 }
