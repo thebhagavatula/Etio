@@ -82,13 +82,26 @@ class MessageDrafterTest {
         drafter.draftOne(Audience.SURGEON, record(estimatedMin = null), case)
 
         val prompt = engine.calls.single().prompt
-        assertTrue(prompt.contains("- Case: 3 (Lap chole)"))
-        assertTrue(prompt.contains("- Theatre: T1"))
-        assertTrue(prompt.contains("- Cause: ${DelayCode.STERILE_SET_UNAVAILABLE.display}"))
-        assertTrue(prompt.contains("- Department: CSSD"))
-        assertTrue(prompt.contains("- Detail: Set returned wet; CSSD reprocessing"))
+        assertTrue(prompt.contains("case 3 (Lap chole) in theatre T1"))
+        assertTrue(prompt.contains("Cause: ${DelayCode.STERILE_SET_UNAVAILABLE.display}, attributed to CSSD"))
+        assertTrue(prompt.contains("Set returned wet; CSSD reprocessing"))
         assertTrue(prompt.contains("not stated — do not invent a number"))
         assertTrue(prompt.trimEnd().endsWith("Message for ${Audience.SURGEON.display}:"))
+    }
+
+    @Test
+    fun `the facts are one flowing sentence, not a bulleted field list`() = runTest {
+        // On-device finding: a model asked to continue right after a bulleted field
+        // list tends to just add more bullets instead of writing prose. Pin the
+        // absence of that shape so nobody reintroduces it.
+        engine.queueSuccess("draft")
+
+        drafter.draftOne(Audience.SURGEON, record(), case)
+
+        val prompt = engine.calls.single().prompt
+        assertFalse(prompt.contains("- Case:"))
+        assertFalse(prompt.contains("- Theatre:"))
+        assertFalse(prompt.contains("- Department:"))
     }
 
     @Test
@@ -97,7 +110,7 @@ class MessageDrafterTest {
 
         drafter.draftOne(Audience.SURGEON, record(estimatedMin = 40), case)
 
-        assertTrue(engine.calls.single().prompt.contains("- Expected delay: 40 minutes"))
+        assertTrue(engine.calls.single().prompt.contains("Expected delay: 40 minutes"))
     }
 
     @Test
@@ -107,8 +120,7 @@ class MessageDrafterTest {
         drafter.draftOne(Audience.SURGEON, record(), case = null)
 
         val prompt = engine.calls.single().prompt
-        assertTrue(prompt.contains("- Case: ? (procedure)"))
-        assertTrue(prompt.contains("- Theatre: ?"))
+        assertTrue(prompt.contains("case ? (procedure) in theatre ?"))
     }
 
     @Test
@@ -201,5 +213,69 @@ class MessageDrafterTest {
             "Case 3 induction delayed about 40 minutes — Sterile set unavailable (CSSD).",
             drafts.getValue(Audience.ANAESTHESIA),
         )
+    }
+
+    // --- duration-consistency guard: Job 2's equivalent of DelayJsonValidator -----
+
+    @Test
+    fun `a hallucinated duration is rejected in favour of the deterministic fallback`() = runTest {
+        // Reproduces an on-device finding verbatim: a FAMILY draft said this while
+        // the record's actual estimatedMin was 40 - spelled out, not "4".
+        engine.queueSuccess(
+            "Your family member's surgery has been delayed by approximately four hours. " +
+                "They anticipate resuming in around 40 minutes.",
+        )
+
+        val body = drafter.draftOne(Audience.FAMILY, record(estimatedMin = 40), case)
+
+        assertEquals(
+            "A short update: your family member is safe and still on today's list. " +
+                "The theatre team needs a little more time, so we expect to start about 40 minutes later than planned. " +
+                "We will update you as soon as they go in.",
+            body,
+        )
+    }
+
+    @Test
+    fun `a duration matching the record passes through untouched`() = runTest {
+        engine.queueSuccess("Case 3 knife approx 40 min late. Set wet, CSSD reprocessing. Will confirm.")
+
+        val body = drafter.draftOne(Audience.SURGEON, record(estimatedMin = 40), case)
+
+        assertEquals("Case 3 knife approx 40 min late. Set wet, CSSD reprocessing. Will confirm.", body)
+    }
+
+    @Test
+    fun `an hour mention is converted to minutes before comparing`() = runTest {
+        engine.queueSuccess("Delayed for 2 hours total.")
+
+        // 2 hours = 120 minutes, disagrees with the record's 40 - falls back.
+        val body = drafter.draftOne(Audience.SURGEON, record(estimatedMin = 40), case)
+
+        assertEquals("Case 3 delayed about 40 minutes. Sterile set unavailable.", body)
+    }
+
+    @Test
+    fun `no duration mentioned at all is fine regardless of the record`() = runTest {
+        engine.queueSuccess("Case 3 on hold, sterile set being reprocessed. Will confirm once ready.")
+
+        val body = drafter.draftOne(Audience.SURGEON, record(estimatedMin = 40), case)
+
+        assertEquals("Case 3 on hold, sterile set being reprocessed. Will confirm once ready.", body)
+    }
+
+    @Test
+    fun `the duration guard applies per-audience inside draftAll too`() = runTest {
+        engine.queueSuccess("Delayed for 2 hours total.") // SURGEON: hallucinated - record says 40 min
+        engine.queueSuccess("Still finishing up, no time yet.") // FAMILY: no mention, fine
+        engine.queueSuccess("On hold, 40 minutes expected.") // WARD: matches, fine
+        engine.queueSuccess("Induction pushed back.") // ANAESTHESIA: no mention, fine
+
+        val drafts = drafter.draftAll(record(estimatedMin = 40), case).toList().associate { it.audience to it.body }
+
+        assertEquals("Case 3 delayed about 40 minutes. Sterile set unavailable.", drafts.getValue(Audience.SURGEON))
+        assertEquals("Still finishing up, no time yet.", drafts.getValue(Audience.FAMILY))
+        assertEquals("On hold, 40 minutes expected.", drafts.getValue(Audience.WARD))
+        assertEquals("Induction pushed back.", drafts.getValue(Audience.ANAESTHESIA))
     }
 }
