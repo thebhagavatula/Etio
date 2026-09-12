@@ -8,12 +8,12 @@ plugins {
 
 android {
     namespace = "com.etio.ot"
-    compileSdk = 35
+    compileSdk = 37.1.toInt()
 
     defaultConfig {
         applicationId = "com.etio.ot"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 37.1.toInt()
         versionCode = 1
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
