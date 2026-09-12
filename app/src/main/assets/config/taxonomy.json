@@ -1,0 +1,19 @@
+{
+  "codes": [
+    { "code": "SURGEON_LATE", "display": "Surgeon late", "description": "Operating surgeon not present or not scrubbed when the room was ready.", "typical_dept": "Surgery" },
+    { "code": "ANAESTHESIA_DELAY", "display": "Anaesthesia delay", "description": "Anaesthetist unavailable, difficult induction, pre-op assessment incomplete, line or block taking longer than planned.", "typical_dept": "Anaesthesia" },
+    { "code": "STERILE_SET_UNAVAILABLE", "display": "Sterile set unavailable", "description": "Instrument tray missing, short, wet, unsterile, or still being reprocessed by CSSD.", "typical_dept": "CSSD" },
+    { "code": "PATIENT_NOT_READY", "display": "Patient not ready", "description": "Patient not fasted, not changed, not marked, investigations pending, or still on the ward being prepared.", "typical_dept": "Ward" },
+    { "code": "CONSENT_INCOMPLETE", "display": "Consent incomplete", "description": "Consent form unsigned, wrong procedure named, or relative not available to countersign.", "typical_dept": "Ward" },
+    { "code": "PREVIOUS_CASE_OVERRUN", "display": "Previous case overrun", "description": "The preceding case in the same theatre ran past its scheduled finish.", "typical_dept": "Theatre" },
+    { "code": "PORTER_TRANSPORT", "display": "Porter / transport", "description": "No porter available, trolley unavailable, lift out of service, patient still in transit.", "typical_dept": "Portering" },
+    { "code": "BLOOD_PRODUCTS", "display": "Blood products", "description": "Cross-match pending, units not issued, blood bank turnaround.", "typical_dept": "Blood Bank" },
+    { "code": "EQUIPMENT_FAILURE", "display": "Equipment failure", "description": "Scope, diathermy, C-arm, laparoscopy stack, microscope or table fault; consumable missing.", "typical_dept": "Biomedical" },
+    { "code": "ICU_BED_UNAVAILABLE", "display": "ICU bed unavailable", "description": "No post-op critical care bed, so the case cannot safely start.", "typical_dept": "ICU" },
+    { "code": "OTHER", "display": "Other", "description": "Anything that does not clearly fit the ten codes above. Used as the fallback whenever the model is unsure.", "typical_dept": "Unattributed" }
+  ],
+  "department_hints": [
+    "CSSD", "Anaesthesia", "Ward", "Portering", "Blood Bank", "ICU",
+    "Surgery", "Biomedical", "Theatre", "Radiology", "Unattributed"
+  ]
+}

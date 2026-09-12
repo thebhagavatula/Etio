@@ -1,0 +1,29 @@
+{
+  "phases": {
+    "SIGN_IN": [
+      { "id": "si_identity", "text": "Patient has confirmed identity, site, procedure and consent", "critical": true },
+      { "id": "si_site_marked", "text": "Site marked / not applicable", "critical": true },
+      { "id": "si_anaesthesia_check", "text": "Anaesthesia machine and medication check complete", "critical": true },
+      { "id": "si_pulse_oximeter", "text": "Pulse oximeter on patient and functioning", "critical": false },
+      { "id": "si_allergy", "text": "Known allergy?", "critical": true },
+      { "id": "si_airway", "text": "Difficult airway or aspiration risk?", "critical": true },
+      { "id": "si_blood_loss", "text": "Risk of >500 ml blood loss (7 ml/kg in children)?", "critical": false }
+    ],
+    "TIME_OUT": [
+      { "id": "to_introductions", "text": "All team members have introduced themselves by name and role", "critical": false },
+      { "id": "to_confirm_patient", "text": "Surgeon, anaesthetist and nurse verbally confirm patient, site and procedure", "critical": true },
+      { "id": "to_critical_surgeon", "text": "Surgeon: critical steps, operative duration, anticipated blood loss", "critical": true },
+      { "id": "to_critical_anaes", "text": "Anaesthetist: patient-specific concerns", "critical": true },
+      { "id": "to_critical_nursing", "text": "Nursing: sterility confirmed, equipment issues or concerns", "critical": true },
+      { "id": "to_antibiotic", "text": "Antibiotic prophylaxis given within the last 60 minutes / not applicable", "critical": true },
+      { "id": "to_imaging", "text": "Essential imaging displayed / not applicable", "critical": false }
+    ],
+    "SIGN_OUT": [
+      { "id": "so_procedure_name", "text": "Nurse verbally confirms the name of the procedure recorded", "critical": true },
+      { "id": "so_counts", "text": "Instrument, sponge and needle counts are correct", "critical": true },
+      { "id": "so_specimen", "text": "Specimen labelled including patient name / not applicable", "critical": true },
+      { "id": "so_equipment_problems", "text": "Any equipment problems to be addressed have been identified", "critical": false },
+      { "id": "so_recovery_concerns", "text": "Surgeon, anaesthetist and nurse review key concerns for recovery", "critical": true }
+    ]
+  }
+}

@@ -1,0 +1,4 @@
+-keep class com.google.mediapipe.** { *; }
+-keepclassmembers class kotlinx.serialization.json.** { *; }
+-keep,includedescriptorclasses class com.etio.ot.**$$serializer { *; }
+-keepclassmembers class com.etio.ot.** { *** Companion; }

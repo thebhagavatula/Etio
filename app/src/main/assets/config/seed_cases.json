@@ -1,0 +1,44 @@
+{
+  "cases": [
+    {
+      "case_number": "1",
+      "theatre_id": "OT-2",
+      "procedure_name": "Laparoscopic cholecystectomy",
+      "surgeon": "Dr. Rao",
+      "scheduled_start": "08:30",
+      "scheduled_duration_min": 75
+    },
+    {
+      "case_number": "2",
+      "theatre_id": "OT-2",
+      "procedure_name": "Open reduction internal fixation, left tibia",
+      "surgeon": "Dr. Menon",
+      "scheduled_start": "10:00",
+      "scheduled_duration_min": 120
+    },
+    {
+      "case_number": "3",
+      "theatre_id": "OT-2",
+      "procedure_name": "Total knee replacement, right",
+      "surgeon": "Dr. Menon",
+      "scheduled_start": "12:15",
+      "scheduled_duration_min": 150
+    },
+    {
+      "case_number": "4",
+      "theatre_id": "OT-2",
+      "procedure_name": "Inguinal hernia repair, mesh",
+      "surgeon": "Dr. Rao",
+      "scheduled_start": "15:00",
+      "scheduled_duration_min": 60
+    },
+    {
+      "case_number": "5",
+      "theatre_id": "OT-2",
+      "procedure_name": "Diagnostic laparoscopy",
+      "surgeon": "Dr. Iyer",
+      "scheduled_start": "16:15",
+      "scheduled_duration_min": 45
+    }
+  ]
+}
