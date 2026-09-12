@@ -18,6 +18,7 @@ import com.etio.ot.data.settings.ThemeMode
 import com.etio.ot.di.CoreModule
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.etio.ot.ui.EtioApp
+import com.etio.ot.ui.tutorial.TutorialHost
 import com.etio.ot.ui.theme.EtioTheme
 
 class MainActivity : ComponentActivity() {
@@ -45,12 +46,21 @@ class MainActivity : ComponentActivity() {
                 ThemeMode.DARK -> true
             }
 
+            // Null until DataStore answers; showing neither for that frame is better
+            // than flashing the tutorial at someone who has already done it.
+            val tutorialDone by CoreModule.settingsStore.tutorialCompleted
+                .collectAsStateWithLifecycle(initialValue = null as Boolean?)
+
             EtioTheme(darkTheme = dark) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    EtioApp()
+                    when (tutorialDone) {
+                        null -> Unit
+                        false -> TutorialHost(onFinished = { })
+                        true -> EtioApp()
+                    }
                 }
             }
         }

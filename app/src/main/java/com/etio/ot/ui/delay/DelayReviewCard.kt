@@ -39,6 +39,8 @@ import com.etio.ot.data.local.entity.DelayRecordEntity
 import com.etio.ot.data.model.Avoidability
 import com.etio.ot.data.model.DelayCode
 import com.etio.ot.di.CoreModule
+import com.etio.ot.ui.tutorial.SpotlightTarget
+import com.etio.ot.ui.tutorial.spotlight
 import com.etio.ot.ui.theme.Etio
 import com.etio.ot.ui.theme.EtioMonoStyle
 
@@ -217,6 +219,7 @@ fun DelayReviewCard(
                 record.transcriptRaw,
                 style = EtioMonoStyle,
                 color = Etio.colors.textSecondary,
+                modifier = Modifier.spotlight(SpotlightTarget.TRANSCRIPT),
             )
         }
 

@@ -26,6 +26,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.etio.ot.data.model.EventType
+import com.etio.ot.ui.tutorial.SpotlightTarget
+import com.etio.ot.ui.tutorial.spotlight
 import com.etio.ot.ui.theme.Etio
 import com.etio.ot.ui.theme.glass
 import com.etio.ot.ui.theme.rememberEtioHaptics
@@ -99,7 +101,8 @@ fun NextEventBar(
                         colors = ButtonDefaults.buttonColors(containerColor = Etio.colors.accent),
                         modifier = Modifier
                             .weight(1f)
-                            .height(PRIMARY_HEIGHT),
+                            .height(PRIMARY_HEIGHT)
+                            .spotlight(SpotlightTarget.NEXT_EVENT),
                     ) {
                         Text(nextEvent.label, style = MaterialTheme.typography.titleMedium)
                     }
@@ -127,6 +130,7 @@ fun NextEventBar(
                     shape = RoundedCornerShape(Etio.radius.pill),
                     modifier = Modifier
                         .size(PRIMARY_HEIGHT)
+                        .spotlight(SpotlightTarget.MIC)
                         .clickableRecord(onRecord),
                 ) {
                     Box(contentAlignment = Alignment.Center) {

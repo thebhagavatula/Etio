@@ -54,6 +54,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.etio.ot.ai.LlmEngine
+import com.etio.ot.ui.tutorial.SpotlightTarget
+import com.etio.ot.ui.tutorial.spotlight
 import com.etio.ot.ui.theme.Etio
 import com.etio.ot.ui.theme.EtioMonoStyle
 import com.etio.ot.ui.theme.glass
@@ -183,7 +185,8 @@ fun DelayCaptureScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = Etio.colors.accent),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(64.dp),
+                                .height(64.dp)
+                                .spotlight(SpotlightTarget.RECORD_CONTROL),
                         ) {
                             Icon(Icons.Default.Mic, contentDescription = null)
                             Spacer(Modifier.width(Etio.space.s))
@@ -295,7 +298,8 @@ private fun RecordingPanel(elapsedSec: Int, level: Float, onStop: () -> Unit) {
                 colors = ButtonDefaults.buttonColors(containerColor = Etio.colors.delay),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(64.dp),
+                    .height(64.dp)
+                    .spotlight(SpotlightTarget.RECORD_CONTROL),
             ) {
                 Icon(Icons.Default.Stop, contentDescription = null)
                 Spacer(Modifier.width(Etio.space.s))

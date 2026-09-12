@@ -97,7 +97,13 @@ parallel without editing the same files. See **BRANCHES.md**.
 
 The default screen shows only the active case, the next-event button, and one status line. `All cases` expands the list; `Other event` opens the full grid for out-of-order marking; `Timer breakdown` expands the spans on a card.
 
-**Long-press the status line** in the top bar to wipe and re-seed the day. Deliberately hidden, and it asks for confirmation — a reset control you can brush on stage is a reset control that ends a demo.
+**Long-press the theatre name** in the top bar to wipe and re-seed the day. Deliberately hidden, and it asks for confirmation — a reset control you can brush on stage is a reset control that ends a demo.
+
+### First run, and settings
+
+The first launch opens a six-step tutorial over the real UI, against a sandbox theatre holding one case (`OT1 · Demo Case · Dr Placeholder`). Every step is performed for real — including recording an actual delay — and finishing or skipping clears the sandbox and loads the seeded OT2 day.
+
+`tutorial_completed` lives in DataStore, not Room, so **the demo reset never brings the tutorial back**. Replay it deliberately from Settings, which also holds the light/dark/system theme choice.
 
 ### What the app fills in for you
 

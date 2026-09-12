@@ -1,7 +1,9 @@
 package com.etio.ot.ui.caselist
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -35,6 +37,8 @@ import com.etio.ot.data.local.entity.EventEntity
 import com.etio.ot.data.model.EventSource
 import com.etio.ot.data.model.EventType
 import com.etio.ot.domain.timing.CaseMetrics
+import com.etio.ot.ui.tutorial.SpotlightTarget
+import com.etio.ot.ui.tutorial.spotlight
 import com.etio.ot.ui.theme.Etio
 import com.etio.ot.ui.theme.EtioStatus
 import java.text.SimpleDateFormat
@@ -46,6 +50,7 @@ import java.util.Locale
  * not by a shadow, and there is no glass anywhere near it because it holds the one
  * number on this screen that is actually moving.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ActiveCaseCard(
     case: CaseEntity,
@@ -146,12 +151,24 @@ fun ActiveCaseCard(
                     )
                 }
 
+            // The most recent mark, and the correction affordance for it. Long-press
+            // used to live only inside the out-of-order sheet, which is a strange
+            // place to bury "that time is wrong".
             metrics?.marks?.maxByOrNull { it.value }?.let { (type, at) ->
+                val row = events.filter { it.type == type }.maxByOrNull { it.timestampMs }
                 Spacer(Modifier.height(Etio.space.s))
                 Text(
-                    "Last mark · ${type.label} ${timeFmt.format(Date(at))}",
+                    "Last mark · ${type.label} ${timeFmt.format(Date(at))} · hold to correct",
                     style = MaterialTheme.typography.labelLarge,
                     color = Etio.colors.textSecondary,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .spotlight(SpotlightTarget.LAST_MARK)
+                        .combinedClickable(
+                            onClick = { },
+                            onLongClick = { row?.let(onSetEventTime) },
+                        )
+                        .padding(vertical = Etio.space.s),
                 )
             }
         }
