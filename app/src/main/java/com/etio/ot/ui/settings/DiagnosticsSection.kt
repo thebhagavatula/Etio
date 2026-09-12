@@ -16,6 +16,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.etio.ot.ai.DecodeProfile
 import com.etio.ot.ai.InferenceTelemetry
@@ -51,34 +53,49 @@ fun DiagnosticsSection(
             Stat("Session prime", t.primeMs?.let { "$it ms" } ?: "—")
 
             t.prefixTokens.forEach { (profile, tokens) ->
-                // Says which it actually is. Claiming a cache hit on a backend that
-                // cannot clone would make the latency figures below unexplainable.
-                val size = if (tokens >= 0) "$tokens tok" else "size unknown"
-                Stat("  $profile prefix", if (t.prefixCached) "$size, cached" else "$size, re-sent each call")
+                // Just the size here. Whether it is cached is one fact about the
+                // backend, not a property of each profile, so it is said once below
+                // instead of repeated on every row — which is what made these values
+                // long enough to crush the labels.
+                Stat(
+                    label = "$profile prefix",
+                    value = if (tokens >= 0) "$tokens tok" else "size unknown",
+                    indented = true,
+                )
             }
-            if (!t.prefixCached) {
-                Stat("Prefix caching", "unavailable — backend cannot clone sessions")
+            if (t.prefixTokens.isNotEmpty()) {
+                // Full width, because it is a sentence. Claiming a cache hit on a
+                // backend that cannot clone would leave the timings below unexplainable.
+                Note(
+                    if (t.prefixCached) {
+                        "Prefixes are primed once and cloned per call."
+                    } else {
+                        "Prefix caching unavailable — this backend cannot clone sessions, " +
+                            "so each prefix is re-sent on every call."
+                    },
+                )
             }
 
-            Spacer(Modifier.height(Etio.space.s))
+            Spacer(Modifier.height(Etio.space.within))
 
             Latency("Classify (Job 1)", DecodeProfile.CLASSIFY, t)
             Latency("Draft (Job 2)", DecodeProfile.DRAFT, t)
 
-            Spacer(Modifier.height(Etio.space.s))
+            Spacer(Modifier.height(Etio.space.within))
 
             // The honest accuracy figure. Not a score the model gives itself — a count
             // of how often a person had to step in before confirming.
             Stat(
                 "Correction rate",
-                t.correctionRate?.let { rate ->
-                    "${(rate * 100).roundToInt()}%  (${t.recordsEdited} of ${t.recordsConfirmed} edited)"
-                } ?: "no records yet",
+                t.correctionRate?.let { "${(it * 100).roundToInt()}%" } ?: "no records yet",
             )
+            t.correctionRate?.let {
+                Note("${t.recordsEdited} of ${t.recordsConfirmed} confirmed records were edited first.")
+            }
             Stat("Parse retries", "${t.parseRetries}")
             Stat("Fell back to OTHER", "${t.parseFallbacks}")
 
-            Spacer(Modifier.height(Etio.space.s))
+            Spacer(Modifier.height(Etio.space.within))
 
             // The one moment you want the splash shorter is the one moment you cannot
             // rebuild: standing at the podium about to present.
@@ -96,11 +113,7 @@ fun DiagnosticsSection(
                     ) { onSplashDurationChange(ms) }
                 }
             }
-            Text(
-                "Applies on next launch. The splash is also tap-to-skip.",
-                style = MaterialTheme.typography.labelSmall,
-                color = Etio.colors.textSecondary,
-            )
+            Note("Applies on next launch. The splash is also tap-to-skip.")
         }
     }
 }
@@ -124,30 +137,60 @@ private fun SplashOption(label: String, selected: Boolean, onClick: () -> Unit) 
 @Composable
 private fun Latency(label: String, profile: String, t: InferenceTelemetry.Snapshot) {
     val calls = t.callsFor(profile)
-    Stat(
-        label,
-        if (calls.isEmpty()) {
-            "—"
-        } else {
-            // Median rather than mean: one cold outlier should not be allowed to
-            // describe the run, in either direction.
-            "${t.medianMs(profile)} ms median · ${t.lastMs(profile)} ms last · ${calls.size} calls"
-        },
-    )
+    if (calls.isEmpty()) {
+        Stat(label, "—")
+        return
+    }
+    // Median rather than mean: one cold outlier should not be allowed to describe the
+    // run, in either direction.
+    Stat(label, "${t.medianMs(profile)} ms")
+    Note("median of ${calls.size} calls · last ${t.lastMs(profile)} ms")
 }
 
+/**
+ * One measurement, label left and value right.
+ *
+ * Both columns are weighted. Giving the label the only weight and letting the value
+ * size itself is what broke this screen: a value long enough to fill the row squeezed
+ * the label to a single character and set it one letter per line. Fixed shares mean
+ * neither column can collapse, and a long value wraps within its own half instead of
+ * taking the other one's space.
+ */
 @Composable
-private fun Stat(label: String, value: String) {
+private fun Stat(label: String, value: String, indented: Boolean = false) {
     Row(
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.Top,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Text(
             label,
             style = MaterialTheme.typography.bodyMedium,
             color = Etio.colors.textSecondary,
-            modifier = Modifier.weight(1f),
+            // A real indent, not leading spaces in the string — those collapse
+            // differently depending on the font and disappear entirely when wrapped.
+            modifier = Modifier
+                .weight(LABEL_SHARE)
+                .padding(start = if (indented) Etio.space.m else 0.dp),
         )
-        Text(value, style = MaterialTheme.typography.bodyMedium)
+        Text(
+            value,
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.End,
+            modifier = Modifier.weight(VALUE_SHARE),
+        )
     }
 }
+
+/** A sentence rather than a measurement: full width, quiet, and allowed to wrap. */
+@Composable
+private fun Note(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelSmall,
+        color = Etio.colors.textSecondary,
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+private const val LABEL_SHARE = 0.45f
+private const val VALUE_SHARE = 0.55f
