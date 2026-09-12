@@ -32,8 +32,6 @@ import com.etio.ot.data.local.entity.DelayRecordEntity
 import com.etio.ot.data.local.entity.EventEntity
 import com.etio.ot.data.model.EventType
 import com.etio.ot.domain.timing.CaseMetrics
-import com.etio.ot.domain.timing.TimerEngine
-import com.etio.ot.ui.events.EventGrid
 import com.etio.ot.ui.theme.EtioStatus
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -46,8 +44,6 @@ fun CaseCard(
     events: List<EventEntity>,
     delays: List<DelayRecordEntity>,
     isActive: Boolean,
-    onMarkEvent: (EventType) -> Unit,
-    onCorrectEvent: (EventEntity, Long) -> Unit,
     onCaptureDelay: () -> Unit,
     onOpenDelay: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -109,20 +105,16 @@ fun CaseCard(
                 }
             }
 
-            Spacer(Modifier.padding(top = 10.dp))
-
-            EventGrid(
-                marked = metrics?.marks.orEmpty(),
-                nextExpected = metrics?.marks?.let { TimerEngine.nextExpectedEvent(it) }
-                    ?: EventType.PATIENT_SENT_FOR,
-                onMark = onMarkEvent,
-                // TODO(build): long-press opens a time picker and passes the chosen
-                // millis. Until then it round-trips the existing timestamp, which is a
-                // no-op the append-only store handles safely.
-                onLongPress = { type ->
-                    events.firstOrNull { it.type == type }?.let { onCorrectEvent(it, it.timestampMs) }
-                },
-            )
+            // The grid moved to the "Other event" sheet: the card states where the
+            // case is, the bottom bar decides what happens next.
+            metrics?.marks?.maxByOrNull { it.value }?.let { (type, at) ->
+                Spacer(Modifier.padding(top = 8.dp))
+                Text(
+                    "${type.label} · ${timeFmt.format(Date(at))}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
             // F9 — delay history strip. Cheap, and it makes the pattern visible live.
             if (delays.isNotEmpty()) {

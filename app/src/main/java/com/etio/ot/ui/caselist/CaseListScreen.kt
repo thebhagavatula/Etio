@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -14,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -23,6 +25,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,7 +39,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.etio.ot.core.formatSignedMinutes
+import com.etio.ot.domain.timing.TimerEngine
+import com.etio.ot.data.model.EventType
 import com.etio.ot.ui.checklist.ChecklistHost
+import com.etio.ot.ui.events.EventGrid
 
 /**
  * OWNER: spine branch.
@@ -53,9 +59,24 @@ fun CaseListScreen(
     val snackbar = remember { SnackbarHostState() }
     val haptics = LocalHapticFeedback.current
     var confirmReset by remember { mutableStateOf(false) }
+    var showEventSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState()
+
+    // Everything the bottom bar needs, derived from the same metrics the timers use.
+    val activeCase = state.cases.firstOrNull { it.id == state.metrics.activeCaseId }
+    val activeMarks = activeCase?.let { state.metrics.forCase(it.id)?.marks }.orEmpty()
+    val nextEvent = activeCase?.let { TimerEngine.nextExpectedEvent(activeMarks) }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
+        bottomBar = {
+            NextEventBar(
+                caseNumber = activeCase?.caseNumber,
+                nextEvent = nextEvent,
+                onMark = { type -> activeCase?.let { viewModel.markEvent(it.id, type) } },
+                onOtherEvent = { showEventSheet = true },
+            )
+        },
         topBar = {
             TopAppBar(
                 title = {
@@ -108,8 +129,6 @@ fun CaseListScreen(
                     events = state.eventsByCase[case.id].orEmpty(),
                     delays = state.delaysByCase[case.id].orEmpty(),
                     isActive = case.id == state.metrics.activeCaseId,
-                    onMarkEvent = { type -> viewModel.markEvent(case.id, type) },
-                    onCorrectEvent = viewModel::correctEvent,
                     onCaptureDelay = { onCaptureDelay(case.id) },
                     onOpenDelay = onOpenMessages,
                     modifier = Modifier.fillMaxWidth(),
@@ -118,11 +137,46 @@ fun CaseListScreen(
             item {
                 Row(modifier = Modifier.padding(top = 8.dp)) {
                     Text(
-                        "Tap marks the clock. Tap the mic only when something has gone wrong.",
+                        "The button at the bottom marks the clock. Tap the mic only when something has gone wrong.",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+            }
+        }
+    }
+
+    // Out-of-order marking, one tap away. The grid is unchanged — it is simply no
+    // longer the thing she has to read before she can mark the obvious next event.
+    if (showEventSheet && activeCase != null) {
+        ModalBottomSheet(
+            onDismissRequest = { showEventSheet = false },
+            sheetState = sheetState,
+        ) {
+            Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
+                Text(
+                    "Case ${activeCase.caseNumber} · mark any event",
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    "For marking out of order, or catching up after the fact.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.padding(top = 12.dp))
+                EventGrid(
+                    marked = activeMarks,
+                    nextExpected = nextEvent ?: EventType.PATIENT_SENT_FOR,
+                    onMark = { type ->
+                        viewModel.markEvent(activeCase.id, type)
+                        showEventSheet = false
+                    },
+                    onLongPress = { type ->
+                        state.eventsByCase[activeCase.id].orEmpty()
+                            .firstOrNull { it.type == type }
+                            ?.let { viewModel.correctEvent(it, it.timestampMs) }
+                    },
+                )
             }
         }
     }
