@@ -35,7 +35,12 @@ class DelayRepository(
      * discarded capture leaves no row.
      */
     suspend fun classify(caseId: String, transcript: String): DelayRecordEntity {
-        val parsed = classifier.classify(transcript)
+        // One sample unless config asks for more. The agreement ratio is only stored
+        // when it was actually measured — a 1.0 from a single sample would be a
+        // confidence figure invented by arithmetic.
+        val samples = classifier.voteSamples()
+        val outcome = classifier.classifyVoted(transcript, samples)
+        val parsed = outcome.merged
         return DelayRecordEntity(
             id = newId(),
             caseId = caseId,
@@ -52,6 +57,7 @@ class DelayRepository(
             noteGrounded = parsed.noteGrounded,
             estimatedMinGrounded = parsed.estimatedMinGrounded,
             deptGrounded = parsed.deptGrounded,
+            agreementRatio = if (samples > 1) outcome.agreementRatio else null,
         )
     }
 

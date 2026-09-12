@@ -75,8 +75,12 @@ fun DelayReviewCard(
     onNotify: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val band = ConfidenceBand.of(record.modelConfidence)
-    val needsAttention = ConfidenceBand.needsAttention(record.modelConfidence, record.fellBackToOther)
+    // Measured agreement wins over self-report where it exists. The ratio is used as
+    // it was measured — 2 of 3 is 0.67 on the screen, not rounded up to look calmer.
+    val band = record.agreementRatio?.let(::bandFromAgreement)
+        ?: ConfidenceBand.of(record.modelConfidence)
+    val needsAttention = record.agreementRatio?.let { it < 1f }
+        ?: ConfidenceBand.needsAttention(record.modelConfidence, record.fellBackToOther)
 
     // A record the model could not place opens on the cause, already editable. She
     // came here to fix it; making her find the edit button first is a tap spent on
@@ -276,6 +280,12 @@ fun DelayReviewCard(
             text = buildString {
                 append("CONFIDENCE ")
                 append(if (showRawConfidence) record.modelConfidence.toString() else "%.2f".format(record.modelConfidence))
+                // Both numbers, side by side. The gap between what the model says
+                // about itself and how often it agreed with itself is the interesting
+                // part, so neither one is allowed to stand in for the other.
+                record.agreementRatio?.let {
+                    append(" · AGREED ${"%.0f".format(it * 100)}%")
+                }
                 append(" · ")
                 append(
                     when (band) {
@@ -387,4 +397,16 @@ private fun Field(
         }
     }
     Spacer(Modifier.height(Etio.space.m))
+}
+
+/**
+ * Bands from measured agreement rather than self-report.
+ *
+ * Unanimous is confident, a bare majority is worth checking, and no majority at all
+ * opens the card on the cause. Nothing here rescales the ratio on its way to a band.
+ */
+private fun bandFromAgreement(ratio: Float): ConfidenceBand = when {
+    ratio >= 1f -> ConfidenceBand.CONFIDENT
+    ratio > 0.5f -> ConfidenceBand.UNCERTAIN
+    else -> ConfidenceBand.LOW
 }

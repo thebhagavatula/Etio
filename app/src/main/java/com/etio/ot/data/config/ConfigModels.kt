@@ -29,6 +29,17 @@ data class ClassificationPrompt(
     @SerialName("max_tokens") val maxTokens: Int = 128,
     val temperature: Float = 0.1f,
     @SerialName("top_k") val topK: Int = 20,
+    /**
+     * How many samples self-consistency voting draws. 1 disables voting.
+     *
+     * Config rather than a constant because the ceiling on it is a latency budget
+     * that has to be measured on the handset the demo runs on, and the one moment
+     * you want to change it is the one moment you cannot rebuild.
+     */
+    @SerialName("vote_samples") val voteSamples: Int = 1,
+    /** Temperature for voting draws. Variance is the signal; 0.1 has none. */
+    @SerialName("vote_temperature") val voteTemperature: Float = 0.7f,
+    @SerialName("vote_top_k") val voteTopK: Int = 40,
 )
 
 @Serializable

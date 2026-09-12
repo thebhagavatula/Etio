@@ -41,14 +41,17 @@ class DelayClassifier(
      * Sequential on purpose. MediaPipe sessions are not safe to use concurrently, and
      * two overlapping decodes on a loaner phone is how the demo ends.
      */
-    suspend fun classifyVoted(transcript: String, samples: Int): SelfConsistency.Outcome {
+    /** Samples drawn per classification, from config. 1 means no voting. */
+    fun voteSamples(): Int = runCatching { config.prompts().classification.voteSamples }.getOrDefault(1)
+
+    suspend fun classifyVoted(transcript: String, samples: Int = voteSamples()): SelfConsistency.Outcome {
         if (samples <= 1) {
             val single = classify(transcript)
             return SelfConsistency.Outcome(single, 1f, SelfConsistency.Agreement.HIGH, listOf(single))
         }
 
         val started = System.currentTimeMillis()
-        val drawn = (1..samples).map { classifyRaw(transcript) }
+        val drawn = (1..samples).map { classifyRaw(transcript, voting = true) }
         val outcome = SelfConsistency.aggregate(drawn)
         val merged = ground(transcript, outcome.merged)
 
@@ -107,18 +110,21 @@ class DelayClassifier(
         )
     }
 
-    private suspend fun classifyRaw(transcript: String): DelayJsonValidator.Parsed {
+    private suspend fun classifyRaw(
+        transcript: String,
+        voting: Boolean = false,
+    ): DelayJsonValidator.Parsed {
         // Null means the engine itself failed, which a retry cannot help: it fails the
         // same way a second later, and spending another three seconds proving that is
         // three seconds she is standing in front of a screen that says nothing.
-        val first = attempt(transcript, retry = false)
+        val first = attempt(transcript, retry = false, voting = voting)
             ?: return DelayJsonValidator.parse("", transcript)
         if (!first.parseFailed) return first
 
         InferenceTelemetry.parseRetry()
         Log.w(TAG, "Job 1 returned no usable JSON; retrying once")
 
-        val second = attempt(transcript, retry = true)
+        val second = attempt(transcript, retry = true, voting = voting)
             ?: return DelayJsonValidator.parse("", transcript)
         if (!second.parseFailed) return second
 
@@ -128,12 +134,16 @@ class DelayClassifier(
     }
 
     /** Null when the engine call itself failed, as opposed to returning unusable text. */
-    private suspend fun attempt(transcript: String, retry: Boolean): DelayJsonValidator.Parsed? {
+    private suspend fun attempt(
+        transcript: String,
+        retry: Boolean,
+        voting: Boolean = false,
+    ): DelayJsonValidator.Parsed? {
         val cfg = config.prompts()
         val started = System.currentTimeMillis()
 
         val raw = engine.generate(
-            profile = profile(),
+            profile = profile(voting),
             stablePrefix = stablePrefix(),
             variableSuffix = variableSuffix(transcript, terse = retry),
             maxTokens = cfg.classification.maxTokens,
@@ -148,13 +158,29 @@ class DelayClassifier(
         return DelayJsonValidator.parse(raw, transcript)
     }
 
-    fun profile(): DecodeProfile {
+    /**
+     * Greedy for a single answer, sampled for a vote.
+     *
+     * At temperature 0.1 three runs agree because the sampler had nowhere else to go,
+     * which measures the decoder, not the model's grip on the utterance. Voting draws
+     * need real variance or the agreement ratio means nothing — and a separate profile
+     * name keeps the two prefixes primed independently.
+     */
+    fun profile(voting: Boolean = false): DecodeProfile {
         val cfg = config.prompts().classification
-        return DecodeProfile(
-            name = DecodeProfile.CLASSIFY,
-            temperature = cfg.temperature,
-            topK = cfg.topK,
-        )
+        return if (voting) {
+            DecodeProfile(
+                name = DecodeProfile.CLASSIFY_VOTE,
+                temperature = cfg.voteTemperature,
+                topK = cfg.voteTopK,
+            )
+        } else {
+            DecodeProfile(
+                name = DecodeProfile.CLASSIFY,
+                temperature = cfg.temperature,
+                topK = cfg.topK,
+            )
+        }
     }
 
     /**

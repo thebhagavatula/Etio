@@ -24,6 +24,9 @@ data class DecodeProfile(
          */
         const val CLASSIFY = "classify"
 
+        /** Same prefix, sampled decode. Primed separately so both stay warm. */
+        const val CLASSIFY_VOTE = "classify_vote"
+
         /** Job 2. Higher, because four messages that read as templated are worse than four that vary. */
         const val DRAFT = "draft"
     }
