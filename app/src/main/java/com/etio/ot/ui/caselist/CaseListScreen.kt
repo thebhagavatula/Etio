@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Settings
@@ -27,6 +28,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -34,11 +36,14 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.etio.ot.domain.timing.DayFlow
@@ -48,13 +53,36 @@ import com.etio.ot.data.model.EventSource
 import com.etio.ot.data.model.EventType
 import com.etio.ot.ui.checklist.ChecklistHost
 import com.etio.ot.ui.events.EventGrid
-import com.etio.ot.ui.theme.tabular
+import com.etio.ot.ui.theme.Etio
+import com.etio.ot.ui.theme.glass
+import com.etio.ot.ui.theme.rememberEtioHaptics
 
 /** Whole minutes, plain words — it changes at most once a minute, so it sits still. */
 private fun Int.asDayStanding(): String = when {
     this > 0 -> "$this min behind"
     this < 0 -> "${-this} min ahead"
     else -> "on time"
+}
+
+/** The day's standing, coloured by how far off it is. Chrome, so glass is fine behind it. */
+@Composable
+private fun VarianceChip(varianceMin: Int) {
+    val tint = when {
+        varianceMin <= 5 -> Etio.colors.running
+        varianceMin <= 20 -> Etio.colors.warning
+        else -> Etio.colors.delay
+    }
+    Surface(
+        color = tint.copy(alpha = 0.16f),
+        shape = RoundedCornerShape(Etio.radius.pill),
+    ) {
+        Text(
+            varianceMin.asDayStanding(),
+            style = MaterialTheme.typography.labelLarge,
+            color = tint,
+            modifier = Modifier.padding(horizontal = Etio.space.m, vertical = Etio.space.s),
+        )
+    }
 }
 
 /**
@@ -72,7 +100,8 @@ fun CaseListScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
-    val haptics = LocalHapticFeedback.current
+    val haptics = rememberEtioHaptics()
+    val dateFmt = remember { SimpleDateFormat("EEE d MMM", Locale.getDefault()) }
     var confirmReset by remember { mutableStateOf(false) }
     var showEventSheet by remember { mutableStateOf(false) }
     var editingEvent by remember { mutableStateOf<EventEntity?>(null) }
@@ -128,37 +157,44 @@ fun CaseListScreen(
                         sendFor?.let { viewModel.markEvent(it.caseId, EventType.PATIENT_SENT_FOR) }
                     },
                     onDismissSendFor = { sendFor?.let { dismissedSendFor.add(it.caseId) } },
+                    onRecord = { focusCase?.let { onCaptureDelay(it.id) } },
                 )
             }
         },
         topBar = {
             TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                modifier = Modifier.glass(RoundedCornerShape(0.dp)),
                 title = {
                     // Between-rehearsal reset, deliberately undiscoverable: a long press
                     // on the title, then a confirmation. There is no visible control for
                     // it — one that can be brushed on stage wipes the day mid-demo.
-                    // One status line, whole minutes. The only other number moving on
-                    // the default screen is the active case's open span, in mm:ss.
-                    Column(
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.pointerInput(Unit) {
                             detectTapGestures(
                                 onLongPress = {
-                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    haptics.medium()
                                     confirmReset = true
                                 },
                             )
                         },
                     ) {
-                        Text(
-                            text = buildString {
-                                append(state.cases.firstOrNull()?.theatreId ?: "—")
-                                focusCase?.let { append(" · Case ${it.caseNumber}") }
-                                append(" · ")
-                                if (dayComplete) append("day complete · ")
-                                append(state.metrics.runningVarianceMin.asDayStanding())
-                            },
-                            style = MaterialTheme.typography.titleMedium.tabular(),
-                        )
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                state.cases.firstOrNull()?.theatreId ?: "—",
+                                style = MaterialTheme.typography.titleLarge,
+                            )
+                            Text(
+                                buildString {
+                                    append(dateFmt.format(Date(state.metrics.computedAtMs)).uppercase())
+                                    if (dayComplete) append(" · DAY COMPLETE")
+                                },
+                                style = MaterialTheme.typography.labelLarge,
+                                color = Etio.colors.textSecondary,
+                            )
+                        }
+                        VarianceChip(state.metrics.runningVarianceMin)
                     }
                 },
                 actions = {
@@ -174,8 +210,13 @@ fun CaseListScreen(
     ) { padding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(
+                start = Etio.space.gutter,
+                end = Etio.space.gutter,
+                top = Etio.space.m,
+                bottom = Etio.space.xxl,
+            ),
+            verticalArrangement = Arrangement.spacedBy(Etio.space.m),
         ) {
             state.shift?.summary?.let { summary ->
                 item {
@@ -194,20 +235,26 @@ fun CaseListScreen(
                 }
             }
 
-            items(visibleCases, key = { it.id }) { case ->
-                CaseCard(
-                    case = case,
-                    metrics = state.metrics.forCase(case.id),
-                    events = state.eventsByCase[case.id].orEmpty(),
-                    delays = state.delaysByCase[case.id].orEmpty(),
-                    isActive = case.id == state.metrics.activeCaseId,
-                    onCaptureDelay = { onCaptureDelay(case.id) },
-                    onOpenDelay = onOpenMessages,
-                    modifier = Modifier.fillMaxWidth(),
-                    onSetEventTime = { editingEvent = it },
-                    dismissedAssumptions = dismissedAssumptions.toSet(),
-                    onDismissAssumption = { dismissedAssumptions.add(it) },
-                )
+            focusCase?.let { case ->
+                item(key = case.id) {
+                    ActiveCaseCard(
+                        case = case,
+                        metrics = state.metrics.forCase(case.id),
+                        events = state.eventsByCase[case.id].orEmpty(),
+                        delays = state.delaysByCase[case.id].orEmpty(),
+                        onOpenDelay = onOpenMessages,
+                        modifier = Modifier.fillMaxWidth(),
+                        onSetEventTime = { editingEvent = it },
+                        dismissedAssumptions = dismissedAssumptions.toSet(),
+                        onDismissAssumption = { dismissedAssumptions.add(it) },
+                    )
+                }
+            }
+
+            if (showAllCases) {
+                items(otherCases, key = { it.id }) { case ->
+                    CaseRow(case = case, metrics = state.metrics.forCase(case.id))
+                }
             }
             if (otherCases.isNotEmpty()) {
                 item {

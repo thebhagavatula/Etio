@@ -1,13 +1,21 @@
 package com.etio.ot.ui.caselist
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -15,22 +23,20 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.etio.ot.data.model.EventType
+import com.etio.ot.ui.theme.Etio
+import com.etio.ot.ui.theme.glass
+import com.etio.ot.ui.theme.rememberEtioHaptics
 
 /**
- * The one decision the coordinator should have to make while walking.
+ * The only decision she should have to make while walking, and the mic beside it.
  *
- * The case state machine already knows which event comes next, so the primary
- * control is not a grid to choose from — it is that single event, full width, at
- * the bottom of the screen where a thumb already is. The grid still exists behind
- * "Other event" for marking out of order.
- *
- * No confirmation dialog: the mark is append-only and correctable, so the cost of
- * a mistap is a long-press, not a lost minute.
+ * Glass is allowed here — this is chrome, it holds no timer, and the translucency is
+ * what tells you the list continues underneath. The button itself is opaque accent:
+ * a primary action reading through to whatever scrolls behind it is not a style, it
+ * is a mistake.
  */
 @Composable
 fun NextEventBar(
@@ -38,85 +44,97 @@ fun NextEventBar(
     nextEvent: EventType?,
     onMark: (EventType) -> Unit,
     onOtherEvent: () -> Unit,
+    onRecord: () -> Unit,
     modifier: Modifier = Modifier,
     sendForLabel: String? = null,
     onSendFor: () -> Unit = {},
     onDismissSendFor: () -> Unit = {},
 ) {
-    val haptics = LocalHapticFeedback.current
+    val haptics = rememberEtioHaptics()
 
-    Surface(
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 3.dp,
-        modifier = modifier.fillMaxWidth(),
-    ) {
-        Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+    Surface(color = Color.Transparent, modifier = modifier.fillMaxWidth().glass(RoundedCornerShape(0.dp))) {
+        Column(Modifier.padding(horizontal = Etio.space.gutter, vertical = Etio.space.m)) {
 
             // The room is ready, so the only question left is whether to send for the
             // next patient. One tap answers it; dismissing leaves the list untouched.
             sendForLabel?.let { label ->
                 Surface(
-                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.16f),
-                    shape = MaterialTheme.shapes.small,
+                    color = Etio.colors.warning.copy(alpha = 0.16f),
+                    shape = RoundedCornerShape(Etio.radius.pill),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(start = 12.dp),
+                        modifier = Modifier.padding(start = Etio.space.l),
                     ) {
                         Text(
                             label,
                             style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.secondary,
+                            color = Etio.colors.warning,
                             modifier = Modifier.weight(1f),
                         )
-                        TextButton(onClick = onDismissSendFor) {
-                            Text("Not yet", style = MaterialTheme.typography.labelSmall)
-                        }
+                        TextButton(onClick = onDismissSendFor) { Text("Not yet") }
                         TextButton(
                             onClick = {
-                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                haptics.tick()
                                 onSendFor()
                             },
                         ) { Text("Send for") }
                     }
                 }
-                Spacer(Modifier.padding(top = 8.dp))
+                Spacer(Modifier.height(Etio.space.m))
             }
 
-            if (nextEvent != null) {
-                Button(
-                    onClick = {
-                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onMark(nextEvent)
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(PRIMARY_HEIGHT),
-                ) {
-                    Text(
-                        nextEvent.label,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-            } else {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = MaterialTheme.shapes.medium,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(PRIMARY_HEIGHT),
-                ) {
-                    Row(
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth(),
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(Etio.space.m),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (nextEvent != null) {
+                    Button(
+                        onClick = {
+                            haptics.tick()
+                            onMark(nextEvent)
+                        },
+                        shape = RoundedCornerShape(Etio.radius.pill),
+                        colors = ButtonDefaults.buttonColors(containerColor = Etio.colors.accent),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(PRIMARY_HEIGHT),
                     ) {
-                        Text(
-                            caseNumber?.let { "Case $it fully marked" } ?: "Nothing to mark",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        Text(nextEvent.label, style = MaterialTheme.typography.titleMedium)
+                    }
+                } else {
+                    Surface(
+                        color = Etio.colors.surface,
+                        shape = RoundedCornerShape(Etio.radius.pill),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(PRIMARY_HEIGHT),
+                    ) {
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                caseNumber?.let { "Case $it fully marked" } ?: "Nothing to mark",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Etio.colors.textSecondary,
+                            )
+                        }
+                    }
+                }
+
+                // Same height as the primary action, same thumb arc.
+                Surface(
+                    color = Etio.colors.accent.copy(alpha = 0.16f),
+                    shape = RoundedCornerShape(Etio.radius.pill),
+                    modifier = Modifier
+                        .size(PRIMARY_HEIGHT)
+                        .clickableRecord(onRecord),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.Mic,
+                            contentDescription = "Say what's holding it up",
+                            tint = Etio.colors.accent,
+                            modifier = Modifier.size(28.dp),
                         )
                     }
                 }
@@ -128,15 +146,12 @@ fun NextEventBar(
             ) {
                 caseNumber?.let {
                     Text(
-                        "Case $it",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        "CASE $it".uppercase(),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = Etio.colors.textSecondary,
                     )
                 }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                ) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = onOtherEvent) { Text("Other event") }
                 }
             }
@@ -144,5 +159,14 @@ fun NextEventBar(
     }
 }
 
-/** Gloved thumb, walking. Well above the 48dp minimum on purpose. */
+@Composable
+private fun Modifier.clickableRecord(onRecord: () -> Unit): Modifier {
+    val haptics = rememberEtioHaptics()
+    return this.clickable {
+        haptics.medium()
+        onRecord()
+    }
+}
+
+/** Gloved thumb, walking. Well above the 44dp minimum on purpose. */
 private val PRIMARY_HEIGHT = 64.dp
