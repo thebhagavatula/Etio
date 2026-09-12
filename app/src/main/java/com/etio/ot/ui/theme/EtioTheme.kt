@@ -62,29 +62,33 @@ data class EtioColors(
 )
 
 /**
- * The same warm palette after dark: espresso rather than beige, and the gold rises to
- * carry it. Dark mode is not a different design — a theatre that dims the lights
- * should not get an app that changes its mind about what colour it is.
+ * Dark mode stays on the original blue-grey. Deliberately NOT the warm palette.
+ *
+ * The beige-and-gold scheme is a light-mode design; carried into dark it became a
+ * brown room, which is a different thing from a dark room. The two themes therefore
+ * do not share a hue here, and that is the decision rather than an oversight.
+ *
+ * The tints reproduce what `.copy(alpha = 0.16f)` used to composite over [surface],
+ * so chips look exactly as they did before tints became explicit roles — the roles
+ * exist now only so the values are checkable, not to change them.
  */
 val DarkEtioColors = EtioColors(
-    background = Color(0xFF17120B),
-    surface = Color(0xFF211A10),
-    surfaceHero = Color(0xFF2B2216),
-    surfaceGlass = Color(0xFF2B2216),
-    border = Color(0xFFEBC96A).copy(alpha = 0.14f),
-    textPrimary = Color(0xFFEBC96A),
-    textSecondary = Color(0xFFC0A48C),
-    accent = Color(0xFFE5A94A),
-    // Warmed toward olive so "on time" belongs to a gold palette instead of reading
-    // as a stray mint from the old blue-grey one. Still unmistakably green.
-    running = Color(0xFF8FCE6A),
-    warning = Color(0xFFF0B44A),
-    delay = Color(0xFFE8796F),
-    runningTint = Color(0xFF2A3119),
-    warningTint = Color(0xFF352815),
-    delayTint = Color(0xFF35201C),
-    accentTint = Color(0xFF332714),
-    safety = Color(0xFFC9A6F0),
+    background = Color(0xFF0B0F14),
+    surface = Color(0xFF141A21),
+    surfaceHero = Color(0xFF1B242F),
+    surfaceGlass = Color(0xFF1C242E),
+    border = Color(0xFFFFFFFF).copy(alpha = 0.08f),
+    textPrimary = Color(0xFFF2F5F8),
+    textSecondary = Color(0xFF8E9BA8),
+    accent = Color(0xFF4DA3FF),
+    running = Color(0xFF3DDC97),
+    warning = Color(0xFFFFB84D),
+    delay = Color(0xFFFF6B6B),
+    runningTint = Color(0xFF1B3934),
+    warningTint = Color(0xFF3A3328),
+    delayTint = Color(0xFF3A272D),
+    accentTint = Color(0xFF1D3045),
+    safety = Color(0xFFB794F6),
     isDark = true,
 )
 
@@ -318,7 +322,7 @@ object EtioStatus {
 
 private fun darkScheme(c: EtioColors) = darkColorScheme(
     primary = c.accent,
-    onPrimary = Color(0xFF201400),
+    onPrimary = Color(0xFF04121F),
     secondary = c.warning,
     onSecondary = Color(0xFF1A1200),
     tertiary = c.safety,
@@ -330,7 +334,7 @@ private fun darkScheme(c: EtioColors) = darkColorScheme(
     onSurface = c.textPrimary,
     surfaceVariant = c.surfaceGlass,
     onSurfaceVariant = c.textSecondary,
-    outline = Color(0xFF5A4A33),
+    outline = Color(0xFF3A4454),
 )
 
 private fun lightScheme(c: EtioColors) = lightColorScheme(

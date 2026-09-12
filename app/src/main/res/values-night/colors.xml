@@ -4,6 +4,6 @@
          Compose and follows the app's own theme choice; this one can only follow the
          system, because the choice lives in DataStore and is not readable from the
          resource system before the first frame. -->
-    <color name="etio_splash_bg">#FF17120B</color>
-    <color name="etio_splash_icon_bg">#FF17120B</color>
+    <color name="etio_splash_bg">#FF0B0F14</color>
+    <color name="etio_splash_icon_bg">#FF0B0F14</color>
 </resources>

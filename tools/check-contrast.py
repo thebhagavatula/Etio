@@ -45,14 +45,16 @@ LIGHT_ROLES = [
     ("safety", "6B4A9E"),
 ]
 
+# Dark stays on the original blue-grey: the warm scheme is a light-mode design and
+# became a brown room rather than a dark one when carried over.
 DARK_ROLES = [
-    ("textPrimary", "EBC96A"),
-    ("textSecondary", "C0A48C"),
-    ("accent", "E5A94A"),
-    ("running", "5FC98A"),
-    ("warning", "F0B44A"),
-    ("delay", "E8796F"),
-    ("safety", "C9A6F0"),
+    ("textPrimary", "F2F5F8"),
+    ("textSecondary", "8E9BA8"),
+    ("accent", "4DA3FF"),
+    ("running", "3DDC97"),
+    ("warning", "FFB84D"),
+    ("delay", "FF6B6B"),
+    ("safety", "B794F6"),
 ]
 
 failures = 0
@@ -77,13 +79,13 @@ check("hero surface", lhero, LIGHT_ROLES)
 for label, alpha in (("glass 78%", 0.78), ("glass 92%", 0.92)):
     check(f"{label} over beige", blend(lsurf, lbg, alpha), LIGHT_ROLES)
 
-print("\n=== DARK — gold on espresso ===")
-dbg, dsurf, dhero = "17120B", "211A10", "2B2216"
-check("espresso background", dbg, DARK_ROLES)
+print("\n=== DARK — original blue-grey (unchanged by the warm theme) ===")
+dbg, dsurf, dhero = "0B0F14", "141A21", "1B242F"
+check("dark background", dbg, DARK_ROLES)
 check("card surface", dsurf, DARK_ROLES)
 check("hero surface", dhero, DARK_ROLES)
 for label, alpha in (("glass 72% (blurred)", 0.72), ("glass 92% (flat)", 0.92)):
-    check(f"{label} over espresso", blend(dhero, dbg, alpha), DARK_ROLES)
+    check(f"{label} over dark bg", blend(dhero, dbg, alpha), DARK_ROLES)
 
 # Chips and banners: the status hue sitting on its own designed ground. These were
 # never checked while the tints were derived with .copy(alpha = ...) — the ground
@@ -98,10 +100,10 @@ LIGHT_CHIPS = [
     ("accent", "8A5A1B", "EFE3CE"),
 ]
 DARK_CHIPS = [
-    ("running", "8FCE6A", "2A3119"),
-    ("warning", "F0B44A", "352815"),
-    ("delay", "E8796F", "35201C"),
-    ("accent", "E5A94A", "332714"),
+    ("running", "3DDC97", "1B3934"),
+    ("warning", "FFB84D", "3A3328"),
+    ("delay", "FF6B6B", "3A272D"),
+    ("accent", "4DA3FF", "1D3045"),
 ]
 for theme, chips, ground in (("light", LIGHT_CHIPS, lbg), ("dark", DARK_CHIPS, dbg)):
     print(f"  {theme}")
