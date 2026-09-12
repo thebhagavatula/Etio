@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A clock face with one wedge highlighted — Etio explains WHY a slice of time
+  was lost, not just how much. Content is kept inside the ~66dp adaptive-icon
+  safe zone (centre 54,54 · rim radius 30 with a 6-wide stroke ⇒ spans 27–33).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- the delay: one wedge of the clock, filled -->
+    <path
+        android:fillColor="@color/etio_amber"
+        android:pathData="M54,54 L54,27 A27,27 0 0,1 77.38,67.5 Z" />
+
+    <!-- clock rim -->
+    <path
+        android:strokeColor="@color/etio_blue"
+        android:strokeWidth="6"
+        android:pathData="M54,24 A30,30 0 1,1 54,84 A30,30 0 1,1 54,24 Z" />
+
+    <!-- hour hand, pointing to 12 -->
+    <path
+        android:strokeColor="@color/etio_on_slate"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:pathData="M54,54 L54,40" />
+
+    <!-- minute hand, pointing to the far edge of the wedge -->
+    <path
+        android:strokeColor="@color/etio_on_slate"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:pathData="M54,54 L73.05,65" />
+
+    <!-- pivot -->
+    <path
+        android:fillColor="@color/etio_on_slate"
+        android:pathData="M57,54 A3,3 0 1,1 51,54 A3,3 0 1,1 57,54 Z" />
+</vector>

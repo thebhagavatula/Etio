@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Mirrors EtioBlue/EtioAmber/EtioSlate in ui/theme/Theme.kt. Android resource
+         colors (manifest icon backgrounds, splash theme) can't reference Compose
+         Color constants, so the palette is duplicated here — keep both in sync. -->
+    <color name="etio_blue">#FF2E6BE6</color>
+    <color name="etio_amber">#FFE8A33D</color>
+    <color name="etio_slate">#FF14181F</color>
+    <color name="etio_on_slate">#FFECEFF4</color>
+</resources>

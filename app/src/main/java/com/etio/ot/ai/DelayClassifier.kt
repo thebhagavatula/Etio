@@ -38,7 +38,7 @@ class DelayClassifier(
         val cfg = config.prompts()
         val taxonomy = config.taxonomy()
 
-        return buildString {
+        val userContent = buildString {
             // --- stable prefix: identical every call, keeps the KV cache warm ---
             appendLine(cfg.systemPrefix)
             appendLine()
@@ -55,9 +55,9 @@ class DelayClassifier(
                 appendLine()
             }
             // --- variable suffix ---
-            appendLine("Coordinator: ${transcript.trim()}")
-            append("JSON:")
+            append("Coordinator: ${transcript.trim()}")
         }
+        return GemmaChatTemplate.wrap(userContent, modelPrefix = "JSON:")
     }
 
     private companion object { const val TAG = "DelayClassifier" }

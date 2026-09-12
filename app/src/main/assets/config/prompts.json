@@ -27,7 +27,7 @@
   },
 
   "drafting": {
-    "instruction": "You are drafting ONE short message about a theatre delay, for ONE named audience. Write only the message body. No greeting line unless the audience rules ask for one, no sign-off, no subject line, no quotation marks, no markdown. Use only facts from the delay record. If a revised time is not known, say the delay is ongoing rather than inventing a time. Keep it under 60 words.",
+    "instruction": "You are drafting ONE short message about a theatre delay, for ONE named audience. Write it as natural, flowing sentences — the way you would actually say it out loud to that person. Never write a bullet list, a labelled dump of the record's fields, or a bare restatement like \"Case: 3\" or \"Cause: X\" on its own line. Write only the message body. No greeting line unless the audience rules ask for one, no sign-off, no subject line, no quotation marks, no markdown. Use only facts from the delay record. Never state a duration other than the one given below — if none is given, say the delay is ongoing rather than inventing a number or a time. Keep it under 60 words.",
     "audiences": {
       "WARD": {
         "register": "Operational and terse. Plain sentences. Assumes clinical literacy.",

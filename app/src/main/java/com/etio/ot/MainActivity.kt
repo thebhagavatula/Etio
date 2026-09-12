@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.etio.ot.ui.EtioApp
 import com.etio.ot.ui.theme.EtioTheme
 
@@ -21,6 +22,7 @@ class MainActivity : ComponentActivity() {
     ) { /* The delay screen reflects the result; nothing else depends on it. */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         // The phone sits on a podium during the pitch. It must not sleep.
