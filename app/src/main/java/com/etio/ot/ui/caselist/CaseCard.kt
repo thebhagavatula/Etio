@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -23,7 +24,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -37,6 +41,7 @@ import com.etio.ot.data.model.EventSource
 import com.etio.ot.data.model.EventType
 import com.etio.ot.domain.timing.CaseMetrics
 import com.etio.ot.ui.theme.EtioStatus
+import com.etio.ot.ui.theme.tabular
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -56,6 +61,7 @@ fun CaseCard(
     onDismissAssumption: (String) -> Unit = {},
 ) {
     val timeFmt = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+    var showBreakdown by remember(case.id) { mutableStateOf(false) }
 
     Card(
         modifier = modifier,
@@ -85,7 +91,7 @@ fun CaseCard(
                 metrics?.startVarianceMin?.let { variance ->
                     Text(
                         variance.formatSignedMinutes(),
-                        style = MaterialTheme.typography.labelLarge,
+                        style = MaterialTheme.typography.labelLarge.tabular(),
                         color = when {
                             variance <= 5 -> EtioStatus.onTime
                             variance <= 20 -> EtioStatus.warning
@@ -102,13 +108,27 @@ fun CaseCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            // Live spans. These update every second, from the system clock only.
+            // One live number, not three. The open span is the only one that is
+            // actually moving; the rest are history and sit behind a tap.
             metrics?.let { m ->
                 Spacer(Modifier.padding(top = 8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    m.turnoverMs?.let { Metric("Turnover", it.formatMmSs()) }
-                    m.anaesthesiaControlledMs?.let { Metric("In room → knife", it.formatMmSs()) }
-                    m.procedureMs?.let { Metric("Procedure", it.formatMmSs()) }
+                openSpan(m)?.let { (label, ms) -> Metric(label, ms.formatMmSs()) }
+
+                TextButton(
+                    onClick = { showBreakdown = !showBreakdown },
+                    contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp),
+                ) {
+                    Text(
+                        if (showBreakdown) "Hide breakdown" else "Timer breakdown",
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
+                if (showBreakdown) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        m.turnoverMs?.let { Metric("Turnover", it.formatMmSs()) }
+                        m.anaesthesiaControlledMs?.let { Metric("In room → knife", it.formatMmSs()) }
+                        m.procedureMs?.let { Metric("Procedure", it.formatMmSs()) }
+                    }
                 }
             }
 
@@ -217,6 +237,20 @@ private fun Metric(label: String, value: String) {
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Text(value, style = MaterialTheme.typography.titleMedium)
+        Text(value, style = MaterialTheme.typography.titleMedium.tabular())
     }
+}
+
+/**
+ * The one span still running, in clinical order. Spans open and close in sequence,
+ * so at most one of these is live at a time across the whole day.
+ */
+private fun openSpan(m: CaseMetrics): Pair<String, Long>? = when {
+    m.isMarked(EventType.KNIFE_TO_SKIN) && !m.isMarked(EventType.CLOSURE_COMPLETE) ->
+        "Procedure" to (m.procedureMs ?: 0L)
+    m.isMarked(EventType.PATIENT_IN_ROOM) && !m.isMarked(EventType.KNIFE_TO_SKIN) ->
+        "In room → knife" to (m.anaesthesiaControlledMs ?: 0L)
+    !m.isMarked(EventType.PATIENT_IN_ROOM) && m.turnoverMs != null ->
+        "Turnover" to m.turnoverMs
+    else -> null
 }

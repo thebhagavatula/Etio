@@ -40,7 +40,6 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.etio.ot.core.formatSignedMinutes
 import com.etio.ot.domain.timing.DayFlow
 import com.etio.ot.domain.timing.TimerEngine
 import com.etio.ot.data.local.entity.EventEntity
@@ -48,6 +47,14 @@ import com.etio.ot.data.model.EventSource
 import com.etio.ot.data.model.EventType
 import com.etio.ot.ui.checklist.ChecklistHost
 import com.etio.ot.ui.events.EventGrid
+import com.etio.ot.ui.theme.tabular
+
+/** Whole minutes, plain words — it changes at most once a minute, so it sits still. */
+private fun Int.asDayStanding(): String = when {
+    this > 0 -> "$this min behind"
+    this < 0 -> "${-this} min ahead"
+    else -> "on time"
+}
 
 /**
  * OWNER: spine branch.
@@ -70,6 +77,7 @@ fun CaseListScreen(
     val dismissedAssumptions = remember { mutableStateListOf<String>() }
     val dismissedSendFor = remember { mutableStateListOf<String>() }
     val dismissedBreaches = remember { mutableStateListOf<String>() }
+    var showAllCases by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
 
     // Everything the bottom bar needs, derived from the same metrics the timers use.
@@ -82,6 +90,14 @@ fun CaseListScreen(
         ?.takeIf { it.caseId !in dismissedSendFor }
     val breach = DayFlow.breach(state.cases, state.metrics)
         ?.takeIf { it.key !in dismissedBreaches }
+
+    // Default surface: the case she is on, and nothing else expanded.
+    val otherCases = state.cases.filter { it.id != activeCase?.id }
+    val visibleCases = if (showAllCases) {
+        listOfNotNull(activeCase) + otherCases
+    } else {
+        listOfNotNull(activeCase)
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
@@ -114,6 +130,8 @@ fun CaseListScreen(
                     // Between-rehearsal reset, deliberately undiscoverable: a long press
                     // on the title, then a confirmation. There is no visible control for
                     // it — one that can be brushed on stage wipes the day mid-demo.
+                    // One status line, whole minutes. The only other number moving on
+                    // the default screen is the active case's open span, in mm:ss.
                     Column(
                         modifier = Modifier.pointerInput(Unit) {
                             detectTapGestures(
@@ -124,19 +142,14 @@ fun CaseListScreen(
                             )
                         },
                     ) {
-                        Text("Today's list", style = MaterialTheme.typography.titleLarge)
-                        val variance = state.metrics.runningVarianceMin
                         Text(
                             text = buildString {
                                 append(state.cases.firstOrNull()?.theatreId ?: "—")
-                                append(" · running ")
-                                append(variance.formatSignedMinutes())
-                                state.metrics.firstCaseStartDelayMin?.let {
-                                    append(" · first case ${it.formatSignedMinutes()}")
-                                }
+                                activeCase?.let { append(" · Case ${it.caseNumber}") }
+                                append(" · ")
+                                append(state.metrics.runningVarianceMin.asDayStanding())
                             },
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.titleMedium.tabular(),
                         )
                     }
                 },
@@ -170,7 +183,7 @@ fun CaseListScreen(
                 }
             }
 
-            items(state.cases, key = { it.id }) { case ->
+            items(visibleCases, key = { it.id }) { case ->
                 CaseCard(
                     case = case,
                     metrics = state.metrics.forCase(case.id),
@@ -185,6 +198,20 @@ fun CaseListScreen(
                     onDismissAssumption = { dismissedAssumptions.add(it) },
                 )
             }
+            if (otherCases.isNotEmpty()) {
+                item {
+                    TextButton(onClick = { showAllCases = !showAllCases }) {
+                        Text(
+                            if (showAllCases) {
+                                "Hide the rest of the list"
+                            } else {
+                                "All cases (${state.cases.size})"
+                            },
+                        )
+                    }
+                }
+            }
+
             item {
                 Row(modifier = Modifier.padding(top = 8.dp)) {
                     Text(
