@@ -84,7 +84,11 @@ fun CaseListScreen(
     // The sheet stays scoped to the active case; the primary button follows the day,
     // so a finished case's room events are still one tap away after it completes.
     val activeCase = state.cases.firstOrNull { it.id == state.metrics.activeCaseId }
-    val activeMarks = activeCase?.let { state.metrics.forCase(it.id)?.marks }.orEmpty()
+    // What the screen shows. Equal to the active case all day; falls back to the last
+    // case once the day is fully marked, when nothing is active any more.
+    val focusCase = DayFlow.focusCaseId(state.cases, state.metrics)
+        ?.let { id -> state.cases.firstOrNull { it.id == id } }
+    val focusMarks = focusCase?.let { state.metrics.forCase(it.id)?.marks }.orEmpty()
     val nextAction = DayFlow.nextAction(state.cases, state.metrics)
     val sendFor = DayFlow.sendForOffer(state.cases, state.metrics)
         ?.takeIf { it.caseId !in dismissedSendFor }
@@ -92,11 +96,11 @@ fun CaseListScreen(
         ?.takeIf { it.key !in dismissedBreaches }
 
     // Default surface: the case she is on, and nothing else expanded.
-    val otherCases = state.cases.filter { it.id != activeCase?.id }
+    val otherCases = state.cases.filter { it.id != focusCase?.id }
     val visibleCases = if (showAllCases) {
-        listOfNotNull(activeCase) + otherCases
+        listOfNotNull(focusCase) + otherCases
     } else {
-        listOfNotNull(activeCase)
+        listOfNotNull(focusCase)
     }
 
     Scaffold(
@@ -226,14 +230,14 @@ fun CaseListScreen(
 
     // Out-of-order marking, one tap away. The grid is unchanged — it is simply no
     // longer the thing she has to read before she can mark the obvious next event.
-    if (showEventSheet && activeCase != null) {
+    if (showEventSheet && focusCase != null) {
         ModalBottomSheet(
             onDismissRequest = { showEventSheet = false },
             sheetState = sheetState,
         ) {
             Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
                 Text(
-                    "Case ${activeCase.caseNumber} · mark any event",
+                    "Case ${focusCase.caseNumber} · mark any event",
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Text(
@@ -243,19 +247,19 @@ fun CaseListScreen(
                 )
                 Spacer(Modifier.padding(top = 12.dp))
                 EventGrid(
-                    marked = activeMarks,
-                    nextExpected = TimerEngine.nextExpectedEvent(activeMarks)
+                    marked = focusMarks,
+                    nextExpected = TimerEngine.nextExpectedEvent(focusMarks)
                         ?: EventType.PATIENT_SENT_FOR,
                     onMark = { type ->
-                        viewModel.markEvent(activeCase.id, type)
+                        viewModel.markEvent(focusCase.id, type)
                         showEventSheet = false
                     },
                     onLongPress = { type ->
-                        state.eventsByCase[activeCase.id].orEmpty()
+                        state.eventsByCase[focusCase.id].orEmpty()
                             .firstOrNull { it.type == type }
                             ?.let { editingEvent = it }
                     },
-                    inferred = state.eventsByCase[activeCase.id].orEmpty()
+                    inferred = state.eventsByCase[focusCase.id].orEmpty()
                         .filter { it.source == EventSource.INFERRED }
                         .map { it.type }
                         .toSet(),

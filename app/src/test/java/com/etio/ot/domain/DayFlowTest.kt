@@ -69,6 +69,36 @@ class DayFlowTest {
         assertEquals(EventType.PATIENT_SENT_FOR, action.event)
     }
 
+    // --- focus case: what the screen shows ---------------------------------------
+
+    @Test
+    fun `focus follows the active case during the day`() {
+        val cases = listOf(case("a", "1", 0), case("b", "2", 1))
+        val events = listOf(event("e1", "a", EventType.PATIENT_IN_ROOM, 5))
+        val m = metrics(cases, events)
+        assertEquals(m.activeCaseId, DayFlow.focusCaseId(cases, m))
+        assertEquals("a", DayFlow.focusCaseId(cases, m))
+    }
+
+    @Test
+    fun `focus falls back to the last case once the day is fully marked`() {
+        val cases = listOf(case("a", "1", 0), case("b", "2", 1))
+        val events = cases.flatMap { c ->
+            EventType.ordered.mapIndexed { i, type -> event("e-${c.id}-$i", c.id, type, i * 10) }
+        }
+        val m = metrics(cases, events)
+
+        // Nothing is active at end of day - that is by design, and the screen must
+        // not go blank because of it.
+        assertNull(m.activeCaseId)
+        assertEquals("b", DayFlow.focusCaseId(cases, m))
+    }
+
+    @Test
+    fun `focus is null only when there are no cases`() {
+        assertNull(DayFlow.focusCaseId(emptyList(), metrics(emptyList(), emptyList())))
+    }
+
     @Test
     fun `send-for is offered only after room ready and only until it is marked`() {
         val cases = listOf(case("a", "1", 0), case("b", "2", 1))

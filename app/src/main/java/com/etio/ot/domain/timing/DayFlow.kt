@@ -53,6 +53,23 @@ object DayFlow {
             .firstOrNull()
 
     /**
+     * Which case the screen should be showing.
+     *
+     * Normally the active one. Once the last PATIENT_OUT is marked nothing is active
+     * any more — [DayMetrics.activeCaseId] is null by design — and a screen that
+     * follows it alone goes blank at exactly the moment someone asks to look at the
+     * day. The last case in the list is the honest thing to show then: it is what she
+     * just finished, and it keeps the event grid reachable for corrections.
+     *
+     * Null only when there are no cases at all.
+     */
+    fun focusCaseId(cases: List<CaseEntity>, metrics: DayMetrics): String? =
+        metrics.activeCaseId
+            ?: cases.filter { it.status != CaseStatus.CANCELLED }
+                .maxByOrNull { it.orderIndex }
+                ?.id
+
+    /**
      * The first span in the day that has run long enough to be worth explaining.
      *
      * Arithmetic on spans the timers already computed — it asks a question, it never
