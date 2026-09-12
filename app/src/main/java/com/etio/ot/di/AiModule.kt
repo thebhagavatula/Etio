@@ -8,6 +8,7 @@ import com.etio.ot.ai.MediaPipeLlmEngine
 import com.etio.ot.ai.MessageDrafter
 import com.etio.ot.ai.ModelLocator
 import com.etio.ot.ai.SpeechCapture
+import com.etio.ot.ai.asPromptSource
 import com.etio.ot.data.repository.DelayRepository
 import java.io.File
 
@@ -45,9 +46,13 @@ object AiModule {
 
     val speechCapture: SpeechCapture by lazy { AndroidSpeechCapture(ServiceLocator.appContext) }
 
-    private val classifier: DelayClassifier by lazy { DelayClassifier(llmEngine, CoreModule.config) }
+    private val classifier: DelayClassifier by lazy {
+        DelayClassifier(llmEngine, CoreModule.config.asPromptSource())
+    }
 
-    private val drafter: MessageDrafter by lazy { MessageDrafter(llmEngine, CoreModule.config) }
+    private val drafter: MessageDrafter by lazy {
+        MessageDrafter(llmEngine, CoreModule.config.asPromptSource())
+    }
 
     val delayRepository: DelayRepository by lazy {
         DelayRepository(

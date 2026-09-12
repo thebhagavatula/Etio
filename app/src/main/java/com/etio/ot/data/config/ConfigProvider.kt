@@ -2,7 +2,6 @@ package com.etio.ot.data.config
 
 import android.content.Context
 import android.util.Log
-import com.etio.ot.ai.PromptSource
 import kotlinx.serialization.json.Json
 import java.io.File
 
@@ -16,7 +15,7 @@ import java.io.File
  * Every accessor falls back to the bundled asset if the on-disk copy is malformed,
  * so a bad edit at 3am cannot brick the demo.
  */
-class ConfigProvider(private val context: Context) : PromptSource {
+class ConfigProvider(private val context: Context) {
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -55,8 +54,8 @@ class ConfigProvider(private val context: Context) : PromptSource {
         seed = load(FILE_SEED)
     }
 
-    override fun prompts(): PromptConfig = prompts ?: load<PromptConfig>(FILE_PROMPTS, fromAssetOnly = true)!!
-    override fun taxonomy(): TaxonomyConfig = taxonomy ?: load<TaxonomyConfig>(FILE_TAXONOMY, fromAssetOnly = true)!!
+    fun prompts(): PromptConfig = prompts ?: load<PromptConfig>(FILE_PROMPTS, fromAssetOnly = true)!!
+    fun taxonomy(): TaxonomyConfig = taxonomy ?: load<TaxonomyConfig>(FILE_TAXONOMY, fromAssetOnly = true)!!
     fun checklist(): ChecklistConfig = checklist ?: load<ChecklistConfig>(FILE_CHECKLIST, fromAssetOnly = true)!!
     fun seed(): SeedConfig = seed ?: load<SeedConfig>(FILE_SEED, fromAssetOnly = true)!!
 
