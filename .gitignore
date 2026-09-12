@@ -16,3 +16,4 @@ captures/
 *.bin
 *.tflite
 models/
+Claude outputs/
