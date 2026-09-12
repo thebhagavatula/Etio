@@ -48,44 +48,58 @@ data class EtioColors(
     val isDark: Boolean,
 )
 
+/**
+ * The same warm palette after dark: espresso rather than beige, and the gold rises to
+ * carry it. Dark mode is not a different design — a theatre that dims the lights
+ * should not get an app that changes its mind about what colour it is.
+ */
 val DarkEtioColors = EtioColors(
-    background = Color(0xFF0B0F14),
-    surface = Color(0xFF141A21),
-    surfaceHero = Color(0xFF1B242F),
-    surfaceGlass = Color(0xFF1C242E),
-    border = Color(0xFFFFFFFF).copy(alpha = 0.08f),
-    textPrimary = Color(0xFFF2F5F8),
-    textSecondary = Color(0xFF8E9BA8),
-    accent = Color(0xFF4DA3FF),
-    running = Color(0xFF3DDC97),
-    warning = Color(0xFFFFB84D),
-    delay = Color(0xFFFF6B6B),
-    safety = Color(0xFFB794F6),
+    background = Color(0xFF17120B),
+    surface = Color(0xFF211A10),
+    surfaceHero = Color(0xFF2B2216),
+    surfaceGlass = Color(0xFF2B2216),
+    border = Color(0xFFEBC96A).copy(alpha = 0.14f),
+    textPrimary = Color(0xFFEBC96A),
+    textSecondary = Color(0xFFC0A48C),
+    accent = Color(0xFFE5A94A),
+    running = Color(0xFF5FC98A),
+    warning = Color(0xFFF0B44A),
+    delay = Color(0xFFE8796F),
+    safety = Color(0xFFC9A6F0),
     isDark = true,
 )
 
 /**
- * Same roles, inverted ground. The four status hues are darkened ~15% so they clear
- * 4.5:1 against white — the dark values are tuned for a near-black background and
- * are too light to read on one.
+ * Beige ground, gold headings, light brown beneath them.
+ *
+ * The gold is the part worth explaining. Metallic gold (#D4AF37) measures 1.83:1 on
+ * this beige and goldenrod 2.84:1 — both are unreadable as text, not marginal. The
+ * value here is a deep antique gold that still reads gold against a warm ground and
+ * clears 4.5:1 with room to spare. Every role in this palette was measured on all
+ * three grounds before it was written down; run tools/check-contrast.py after any
+ * edit, because on a warm low-contrast ground the eye is a much worse judge than it
+ * is on white.
+ *
+ * textPrimary is headings and body; textSecondary is the labels, captions and
+ * supporting lines under them. Keeping the brown lighter than the gold is what makes
+ * the hierarchy read — 6.61:1 against 4.98:1.
  */
 val LightEtioColors = EtioColors(
-    background = Color(0xFFF7F9FB),
-    surface = Color(0xFFFFFFFF),
-    // Already the lightest ground available, so on light the hero earns its weight
-    // through size, padding and radius rather than through another step of value.
-    surfaceHero = Color(0xFFFFFFFF),
-    surfaceGlass = Color(0xFFFFFFFF),
-    border = Color(0xFF0B0F14).copy(alpha = 0.10f),
-    textPrimary = Color(0xFF0B0F14),
-    textSecondary = Color(0xFF5A6875),
-    accent = Color(0xFF0B62C4),
-    // Darker than a straight 15% step: the obvious value measured 4.48:1 on light
-    // glass, so it was taken down until it cleared 4.5 with room to spare (5.16:1).
-    running = Color(0xFF0F7C52),
+    background = Color(0xFFF5EFE1),
+    surface = Color(0xFFFBF7EE),
+    // A third step up, so the active case lifts off the beige without a shadow.
+    surfaceHero = Color(0xFFFFFDF7),
+    surfaceGlass = Color(0xFFFBF7EE),
+    border = Color(0xFF6B5000).copy(alpha = 0.16f),
+    textPrimary = Color(0xFF6B5000),
+    textSecondary = Color(0xFF7D6055),
+    accent = Color(0xFF8A5A1B),
+    // Warmed toward the ground so the status hues belong to this palette rather than
+    // looking borrowed from the old blue one, and re-measured after warming.
+    running = Color(0xFF2F6B43),
     warning = Color(0xFF8A5A00),
-    delay = Color(0xFFC02B2B),
-    safety = Color(0xFF6B3FB5),
+    delay = Color(0xFFA33228),
+    safety = Color(0xFF6B4A9E),
     isDark = false,
 )
 
@@ -257,7 +271,7 @@ object EtioStatus {
 
 private fun darkScheme(c: EtioColors) = darkColorScheme(
     primary = c.accent,
-    onPrimary = Color(0xFF04121F),
+    onPrimary = Color(0xFF201400),
     secondary = c.warning,
     onSecondary = Color(0xFF1A1200),
     tertiary = c.safety,
@@ -269,7 +283,7 @@ private fun darkScheme(c: EtioColors) = darkColorScheme(
     onSurface = c.textPrimary,
     surfaceVariant = c.surfaceGlass,
     onSurfaceVariant = c.textSecondary,
-    outline = Color(0xFF3A4454),
+    outline = Color(0xFF5A4A33),
 )
 
 private fun lightScheme(c: EtioColors) = lightColorScheme(
@@ -284,9 +298,9 @@ private fun lightScheme(c: EtioColors) = lightColorScheme(
     onBackground = c.textPrimary,
     surface = c.surface,
     onSurface = c.textPrimary,
-    surfaceVariant = Color(0xFFEDF1F5),
+    surfaceVariant = Color(0xFFF0E9D9),
     onSurfaceVariant = c.textSecondary,
-    outline = Color(0xFFC4CDD6),
+    outline = Color(0xFFCBBB9E),
 )
 
 @Composable
