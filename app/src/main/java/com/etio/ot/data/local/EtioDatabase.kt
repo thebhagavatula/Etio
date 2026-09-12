@@ -24,7 +24,8 @@ import com.etio.ot.data.local.entity.GeneratedMessageEntity
         ChecklistRunEntity::class,
         GeneratedMessageEntity::class,
     ],
-    version = 1,
+    // 2: grounding flags on delay_records (T3).
+    version = 2,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)

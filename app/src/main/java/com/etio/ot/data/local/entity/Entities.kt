@@ -83,6 +83,13 @@ data class DelayRecordEntity(
     val userEdited: Boolean = false,
     /** True when the model output failed validation and we fell back to OTHER. */
     val fellBackToOther: Boolean = false,
+    /**
+     * Extractive-grounding results, from [com.etio.ot.ai.GroundingVerifier]. Each says
+     * the field was found in the transcript rather than introduced by the model.
+     */
+    val noteGrounded: Boolean = true,
+    val estimatedMinGrounded: Boolean = true,
+    val deptGrounded: Boolean = true,
 )
 
 @Entity(

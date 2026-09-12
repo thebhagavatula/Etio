@@ -27,7 +27,55 @@ class DelayClassifier(
      * Beyond that we stop. A third attempt is a worse use of the time than handing her
      * an OTHER with her own words in the note and letting her fix it in two taps.
      */
-    suspend fun classify(transcript: String): DelayJsonValidator.Parsed {
+    suspend fun classify(transcript: String): DelayJsonValidator.Parsed =
+        ground(transcript, classifyRaw(transcript))
+
+    /**
+     * The invariant, applied to whatever came back: a number nobody said is dropped, a
+     * note containing words nobody said is replaced by words she did say, and a
+     * department nobody named falls back to the code's own default.
+     *
+     * Deterministic, and deliberately outside the retry loop — re-asking the model
+     * would just be asking the thing that invented it to check itself.
+     */
+    fun ground(transcript: String, parsed: DelayJsonValidator.Parsed): DelayJsonValidator.Parsed {
+        val taxonomy = runCatching { config.taxonomy() }.getOrNull()
+        val defaultDept = taxonomy?.codes
+            ?.firstOrNull { it.code.equals(parsed.code.name, ignoreCase = true) }
+            ?.typicalDept
+            .orEmpty()
+
+        val checked = GroundingVerifier.verify(
+            transcript = transcript,
+            estimatedMin = parsed.estimatedMin,
+            note = parsed.note,
+            attributedDept = parsed.attributedDept,
+            codeDefaultDept = defaultDept,
+            deptAliases = runCatching { config.prompts().departmentAliases }.getOrDefault(emptyMap()),
+        )
+
+        if (parsed.estimatedMin != null && !checked.estimatedMinGrounded) {
+            Log.w(TAG, "Dropped estimated_min=${parsed.estimatedMin}: no matching duration in transcript")
+            InferenceTelemetry.groundingRejection("estimated_min")
+        }
+        if (!checked.noteGrounded) {
+            Log.w(TAG, "Replaced note; ungrounded words=${checked.ungroundedNoteWords}")
+            InferenceTelemetry.groundingRejection("note")
+        }
+        if (!checked.deptGrounded) InferenceTelemetry.groundingRejection("dept")
+
+        return parsed.copy(
+            estimatedMin = checked.estimatedMin,
+            note = checked.note,
+            attributedDept = checked.attributedDept,
+            noteGrounded = checked.noteGrounded,
+            estimatedMinGrounded = checked.estimatedMinGrounded,
+            deptGrounded = checked.deptGrounded,
+            ungroundedNoteWords = checked.ungroundedNoteWords,
+        )
+    }
+
+    private suspend fun classifyRaw(transcript: String): DelayJsonValidator.Parsed {
         // Null means the engine itself failed, which a retry cannot help: it fails the
         // same way a second later, and spending another three seconds proving that is
         // three seconds she is standing in front of a screen that says nothing.

@@ -49,6 +49,9 @@ class DelayRepository(
             modelConfidence = parsed.confidence,
             userEdited = false,
             fellBackToOther = parsed.fellBack,
+            noteGrounded = parsed.noteGrounded,
+            estimatedMinGrounded = parsed.estimatedMinGrounded,
+            deptGrounded = parsed.deptGrounded,
         )
     }
 

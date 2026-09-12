@@ -141,6 +141,7 @@ fun DelayReviewCard(
                 label = "Department",
                 value = record.attributedDept.ifBlank { "—" },
                 band = band,
+                grounded = record.deptGrounded,
                 onEdit = { editing = if (editing == Field.DEPT) null else Field.DEPT },
             )
         }
@@ -195,6 +196,8 @@ fun DelayReviewCard(
         RevealAfter(300, stagger) {
             Field(
                 label = "Expected delay",
+                // Nothing to verify when nothing was claimed, so no indicator either.
+                grounded = record.estimatedMin?.let { record.estimatedMinGrounded },
                 value = record.estimatedMin?.let { "$it min" } ?: "Not stated",
                 onEdit = { editing = if (editing == Field.ETA) null else Field.ETA },
             )
@@ -216,6 +219,7 @@ fun DelayReviewCard(
         Field(
             label = "Note",
             value = record.note.ifBlank { "—" },
+            grounded = record.noteGrounded,
             onEdit = { editing = if (editing == Field.NOTE) null else Field.NOTE },
         )
         if (editing == Field.NOTE) {
@@ -327,6 +331,12 @@ private fun Field(
     value: String,
     onEdit: () -> Unit,
     band: ConfidenceBand? = null,
+    /**
+     * Null where the question does not arise. True means a deterministic check found
+     * this field's content in the transcript; false means the model introduced it and
+     * the verifier has already replaced or dropped what it could.
+     */
+    grounded: Boolean? = null,
 ) {
     val flagged = band == ConfidenceBand.UNCERTAIN
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
@@ -352,6 +362,16 @@ private fun Field(
                         "CHECK THIS",
                         style = MaterialTheme.typography.labelSmall,
                         color = Etio.colors.warning,
+                    )
+                }
+                // The visible artefact of the invariant: a tick means these words came
+                // out of the transcript, not out of the model.
+                grounded?.let { ok ->
+                    Spacer(Modifier.width(Etio.space.s))
+                    Text(
+                        if (ok) "✓ HEARD" else "NOT HEARD",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (ok) Etio.colors.running else Etio.colors.textSecondary,
                     )
                 }
             }

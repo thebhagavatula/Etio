@@ -99,5 +99,90 @@
     "max_tokens": 200,
     "temperature": 0.5,
     "top_k": 40
+  },
+  "department_aliases": {
+    "CSSD": [
+      "cssd",
+      "sterile",
+      "sterilisation",
+      "sterilization",
+      "tsu",
+      "autoclave",
+      "set"
+    ],
+    "Portering": [
+      "porter",
+      "portering",
+      "transport",
+      "trolley",
+      "shifting",
+      "ward boy"
+    ],
+    "Surgery": [
+      "surgeon",
+      "sir",
+      "consultant",
+      "operating surgeon",
+      "opd"
+    ],
+    "Anaesthesia": [
+      "anaesthesia",
+      "anesthesia",
+      "anaesthetist",
+      "anesthetist",
+      "induction",
+      "spinal",
+      "epidural"
+    ],
+    "Ward": [
+      "ward",
+      "upstairs",
+      "floor",
+      "nursing station"
+    ],
+    "Biomedical": [
+      "biomed",
+      "biomedical",
+      "engineer",
+      "cautery",
+      "machine",
+      "equipment"
+    ],
+    "Blood Bank": [
+      "blood bank",
+      "blood",
+      "crossmatch",
+      "cross match",
+      "units",
+      "transfusion"
+    ],
+    "ICU": [
+      "icu",
+      "intensive care",
+      "hdu",
+      "bed"
+    ],
+    "Radiology": [
+      "radiology",
+      "x ray",
+      "xray",
+      "scan",
+      "c arm",
+      "image"
+    ],
+    "Housekeeping": [
+      "housekeeping",
+      "cleaning",
+      "mopping",
+      "fumigation"
+    ],
+    "Theatre": [
+      "theatre",
+      "theater",
+      "ot",
+      "table",
+      "list"
+    ],
+    "Unattributed": []
   }
 }

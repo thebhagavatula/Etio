@@ -38,6 +38,12 @@ object DelayJsonValidator {
          */
         val parseFailed: Boolean,
         val rawModelOutput: String,
+        /** Set by [GroundingVerifier] after parsing; true until something checks. */
+        val noteGrounded: Boolean = true,
+        val estimatedMinGrounded: Boolean = true,
+        val deptGrounded: Boolean = true,
+        /** Debug only: note words the transcript did not support. */
+        val ungroundedNoteWords: List<String> = emptyList(),
     )
 
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }

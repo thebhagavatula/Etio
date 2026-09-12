@@ -45,6 +45,8 @@ object InferenceTelemetry {
         val recordsEdited: Int = 0,
         val parseRetries: Int = 0,
         val parseFallbacks: Int = 0,
+        /** Fields the grounding verifier refused, by field name. */
+        val groundingRejections: Map<String, Int> = emptyMap(),
     ) {
         fun callsFor(profile: String): List<Call> = calls.filter { it.profile == profile }
 
@@ -86,6 +88,15 @@ object InferenceTelemetry {
     fun parseRetry() = _snapshot.update { it.copy(parseRetries = it.parseRetries + 1) }
 
     fun parseFallback() = _snapshot.update { it.copy(parseFallbacks = it.parseFallbacks + 1) }
+
+    /**
+     * A field the transcript did not support. Counted per field, because "the model
+     * invents durations" and "the model invents notes" are different problems with
+     * different fixes.
+     */
+    fun groundingRejection(field: String) = _snapshot.update {
+        it.copy(groundingRejections = it.groundingRejections + (field to (it.groundingRejections[field] ?: 0) + 1))
+    }
 
     /** Called once per confirmed DelayRecord, with whether the coordinator edited it. */
     fun recordConfirmed(edited: Boolean) = _snapshot.update {

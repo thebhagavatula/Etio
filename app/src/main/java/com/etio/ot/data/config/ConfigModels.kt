@@ -15,6 +15,11 @@ data class PromptConfig(
     @SerialName("system_prefix") val systemPrefix: String,
     @SerialName("classification") val classification: ClassificationPrompt,
     @SerialName("drafting") val drafting: DraftingPrompt,
+    /**
+     * Department -> words that count as having said it out loud. Read only by the
+     * grounding verifier; the model never sees this table.
+     */
+    @SerialName("department_aliases") val departmentAliases: Map<String, List<String>> = emptyMap(),
 )
 
 @Serializable
