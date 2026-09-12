@@ -5,11 +5,15 @@ import com.etio.ot.ai.DelayClassifier
 import com.etio.ot.ai.FakeLlmEngine
 import com.etio.ot.ai.LlmEngine
 import com.etio.ot.ai.MediaPipeLlmEngine
+import com.etio.ot.ai.MessageDraftCoordinator
 import com.etio.ot.ai.MessageDrafter
 import com.etio.ot.ai.ModelLocator
 import com.etio.ot.ai.SpeechCapture
 import com.etio.ot.ai.asPromptSource
 import com.etio.ot.data.repository.DelayRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import java.io.File
 
 /**
@@ -62,6 +66,17 @@ object AiModule {
             drafter = drafter,
             caseRepository = CoreModule.caseRepository,
             clock = ServiceLocator.clock,
+        )
+    }
+
+    /**
+     * Job 2 runs here rather than in a screen's ViewModel, so drafting survives the
+     * coordinator walking away from the capture screen the instant she confirms.
+     */
+    val draftCoordinator: MessageDraftCoordinator by lazy {
+        MessageDraftCoordinator(
+            delays = delayRepository,
+            scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
         )
     }
 

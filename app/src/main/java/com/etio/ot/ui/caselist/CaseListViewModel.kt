@@ -12,6 +12,7 @@ import com.etio.ot.data.repository.DelayRepository
 import com.etio.ot.di.AiModule
 import com.etio.ot.di.CoreModule
 import com.etio.ot.domain.timing.DayMetrics
+import com.etio.ot.domain.timing.ScheduleProjector
 import com.etio.ot.domain.timing.TimerEngine
 import com.etio.ot.ui.checklist.ChecklistGateController
 import kotlinx.coroutines.delay
@@ -51,12 +52,20 @@ class CaseListViewModel(
         cases.events,
         delays.delays,
         ticker,
-    ) { caseRows, eventRows, delayRows, _ ->
+    ) { caseRows, eventRows, delayRows, now ->
         CaseListUiState(
             cases = caseRows,
             eventsByCase = eventRows.groupBy { it.caseId },
             delaysByCase = delayRows.groupBy { it.caseId },
             metrics = TimerEngine.compute(caseRows, eventRows),
+            // Pure arithmetic off the most recent delay that actually stated a
+            // duration. No model involvement, recomputed with the rest of the state.
+            shift = delayRows
+                .filter { it.estimatedMin != null }
+                .maxByOrNull { it.createdAtMs }
+                ?.let {
+                    ScheduleProjector.project(caseRows, it.caseId, it.estimatedMin, now)
+                },
             loading = false,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CaseListUiState())
@@ -97,5 +106,7 @@ data class CaseListUiState(
     val eventsByCase: Map<String, List<EventEntity>> = emptyMap(),
     val delaysByCase: Map<String, List<DelayRecordEntity>> = emptyMap(),
     val metrics: DayMetrics = DayMetrics.Empty,
+    /** Non-null only while a delay with a stated duration is pushing the rest of the day. */
+    val shift: ScheduleProjector.Shift? = null,
     val loading: Boolean = true,
 )

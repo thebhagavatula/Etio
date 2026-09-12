@@ -44,6 +44,13 @@ private val LightColors = lightColorScheme(
     error = EtioRed,
 )
 
+/**
+ * Tabular figures for anything that ticks. Proportional digits reflow as the value
+ * changes — a running clock visibly jitters at arm's length, which is exactly the
+ * kind of movement that pulls a walking coordinator's eye back to the screen.
+ */
+fun TextStyle.tabular(): TextStyle = copy(fontFeatureSettings = "tnum")
+
 /** Semantic colours for delay state — used by cards and the report. */
 object EtioStatus {
     val onTime = EtioGreen

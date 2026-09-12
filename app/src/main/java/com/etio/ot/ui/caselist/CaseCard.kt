@@ -1,11 +1,13 @@
 package com.etio.ot.ui.caselist
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -18,9 +20,14 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -30,11 +37,11 @@ import com.etio.ot.core.formatSignedMinutes
 import com.etio.ot.data.local.entity.CaseEntity
 import com.etio.ot.data.local.entity.DelayRecordEntity
 import com.etio.ot.data.local.entity.EventEntity
+import com.etio.ot.data.model.EventSource
 import com.etio.ot.data.model.EventType
 import com.etio.ot.domain.timing.CaseMetrics
-import com.etio.ot.domain.timing.TimerEngine
-import com.etio.ot.ui.events.EventGrid
 import com.etio.ot.ui.theme.EtioStatus
+import com.etio.ot.ui.theme.tabular
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -46,13 +53,15 @@ fun CaseCard(
     events: List<EventEntity>,
     delays: List<DelayRecordEntity>,
     isActive: Boolean,
-    onMarkEvent: (EventType) -> Unit,
-    onCorrectEvent: (EventEntity, Long) -> Unit,
     onCaptureDelay: () -> Unit,
     onOpenDelay: (String) -> Unit,
     modifier: Modifier = Modifier,
+    onSetEventTime: (EventEntity) -> Unit = {},
+    dismissedAssumptions: Set<String> = emptySet(),
+    onDismissAssumption: (String) -> Unit = {},
 ) {
     val timeFmt = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+    var showBreakdown by remember(case.id) { mutableStateOf(false) }
 
     Card(
         modifier = modifier,
@@ -82,7 +91,7 @@ fun CaseCard(
                 metrics?.startVarianceMin?.let { variance ->
                     Text(
                         variance.formatSignedMinutes(),
-                        style = MaterialTheme.typography.labelLarge,
+                        style = MaterialTheme.typography.labelLarge.tabular(),
                         color = when {
                             variance <= 5 -> EtioStatus.onTime
                             variance <= 20 -> EtioStatus.warning
@@ -99,30 +108,53 @@ fun CaseCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            // Live spans. These update every second, from the system clock only.
+            // One live number, not three. The open span is the only one that is
+            // actually moving; the rest are history and sit behind a tap.
             metrics?.let { m ->
                 Spacer(Modifier.padding(top = 8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    m.turnoverMs?.let { Metric("Turnover", it.formatMmSs()) }
-                    m.anaesthesiaControlledMs?.let { Metric("In room → knife", it.formatMmSs()) }
-                    m.procedureMs?.let { Metric("Procedure", it.formatMmSs()) }
+                openSpan(m)?.let { (label, ms) -> Metric(label, ms.formatMmSs()) }
+
+                TextButton(
+                    onClick = { showBreakdown = !showBreakdown },
+                    contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp),
+                ) {
+                    Text(
+                        if (showBreakdown) "Hide breakdown" else "Timer breakdown",
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
+                if (showBreakdown) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        m.turnoverMs?.let { Metric("Turnover", it.formatMmSs()) }
+                        m.anaesthesiaControlledMs?.let { Metric("In room → knife", it.formatMmSs()) }
+                        m.procedureMs?.let { Metric("Procedure", it.formatMmSs()) }
+                    }
                 }
             }
 
-            Spacer(Modifier.padding(top = 10.dp))
+            // Every event the app filled in states itself, until she dismisses it or
+            // sets the real time. Nothing inferred happens quietly.
+            events.filter { it.source == EventSource.INFERRED && it.id !in dismissedAssumptions }
+                .sortedBy { it.type.ordinal }
+                .forEach { assumed ->
+                    Spacer(Modifier.padding(top = 8.dp))
+                    AssumedEventChip(
+                        label = "${assumed.type.label} assumed at ${timeFmt.format(Date(assumed.timestampMs))}",
+                        onSetTime = { onSetEventTime(assumed) },
+                        onDismiss = { onDismissAssumption(assumed.id) },
+                    )
+                }
 
-            EventGrid(
-                marked = metrics?.marks.orEmpty(),
-                nextExpected = metrics?.marks?.let { TimerEngine.nextExpectedEvent(it) }
-                    ?: EventType.PATIENT_SENT_FOR,
-                onMark = onMarkEvent,
-                // TODO(build): long-press opens a time picker and passes the chosen
-                // millis. Until then it round-trips the existing timestamp, which is a
-                // no-op the append-only store handles safely.
-                onLongPress = { type ->
-                    events.firstOrNull { it.type == type }?.let { onCorrectEvent(it, it.timestampMs) }
-                },
-            )
+            // The grid moved to the "Other event" sheet: the card states where the
+            // case is, the bottom bar decides what happens next.
+            metrics?.marks?.maxByOrNull { it.value }?.let { (type, at) ->
+                Spacer(Modifier.padding(top = 8.dp))
+                Text(
+                    "${type.label} · ${timeFmt.format(Date(at))}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
             // F9 — delay history strip. Cheap, and it makes the pattern visible live.
             if (delays.isNotEmpty()) {
@@ -162,6 +194,41 @@ fun CaseCard(
     }
 }
 
+/**
+ * An inferred write, said out loud. "Tap to set" is the correction path; dismissing
+ * only hides the chip — the event itself stays in the timeline, italicised.
+ */
+@Composable
+private fun AssumedEventChip(
+    label: String,
+    onSetTime: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.16f),
+        shape = MaterialTheme.shapes.small,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 10.dp),
+        ) {
+            Text(
+                "$label — tap to set",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable(onClick = onSetTime)
+                    .padding(vertical = 10.dp),
+            )
+            TextButton(onClick = onDismiss) {
+                Text("Dismiss", style = MaterialTheme.typography.labelSmall)
+            }
+        }
+    }
+}
+
 @Composable
 private fun Metric(label: String, value: String) {
     Column {
@@ -170,6 +237,20 @@ private fun Metric(label: String, value: String) {
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Text(value, style = MaterialTheme.typography.titleMedium)
+        Text(value, style = MaterialTheme.typography.titleMedium.tabular())
     }
+}
+
+/**
+ * The one span still running, in clinical order. Spans open and close in sequence,
+ * so at most one of these is live at a time across the whole day.
+ */
+private fun openSpan(m: CaseMetrics): Pair<String, Long>? = when {
+    m.isMarked(EventType.KNIFE_TO_SKIN) && !m.isMarked(EventType.CLOSURE_COMPLETE) ->
+        "Procedure" to (m.procedureMs ?: 0L)
+    m.isMarked(EventType.PATIENT_IN_ROOM) && !m.isMarked(EventType.KNIFE_TO_SKIN) ->
+        "In room → knife" to (m.anaesthesiaControlledMs ?: 0L)
+    !m.isMarked(EventType.PATIENT_IN_ROOM) && m.turnoverMs != null ->
+        "Turnover" to m.turnoverMs
+    else -> null
 }

@@ -14,14 +14,21 @@ package com.etio.ot.ui
 object Routes {
 
     const val CASES = "cases"
-    const val DELAY = "delay/{caseId}"
+    const val DELAY = "delay/{caseId}?autostart={autostart}"
     const val MESSAGES = "messages/{delayId}"
     const val REPORT = "report"
 
     const val ARG_CASE_ID = "caseId"
     const val ARG_DELAY_ID = "delayId"
 
-    fun delay(caseId: String): String = "delay/$caseId"
+    /**
+     * [autoStart] is set only by the threshold-breach banner, whose tap IS the
+     * explicit start of recording. Ordinary navigation leaves it false.
+     */
+    const val ARG_AUTOSTART = "autostart"
+
+    fun delay(caseId: String, autoStart: Boolean = false): String =
+        "delay/$caseId?autostart=$autoStart"
 
     fun messages(delayId: String): String = "messages/$delayId"
 }

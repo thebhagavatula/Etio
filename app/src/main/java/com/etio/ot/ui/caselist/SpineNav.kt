@@ -12,6 +12,7 @@ fun NavGraphBuilder.spineGraph(nav: NavHostController) {
     composable(Routes.CASES) {
         CaseListScreen(
             onCaptureDelay = { caseId -> nav.navigate(Routes.delay(caseId)) },
+            onRecordDelay = { caseId -> nav.navigate(Routes.delay(caseId, autoStart = true)) },
             onOpenMessages = { delayId -> nav.navigate(Routes.messages(delayId)) },
             onOpenReport = { nav.navigate(Routes.REPORT) },
         )

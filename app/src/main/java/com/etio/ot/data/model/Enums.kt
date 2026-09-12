@@ -32,7 +32,12 @@ enum class EventType(val label: String, val shortLabel: String) {
     }
 }
 
-enum class EventSource { TAP, VOICE }
+/**
+ * How an event row got its timestamp. [INFERRED] rows are written by the app when a
+ * later event is marked and an earlier one is missing: never silently, always shown
+ * as assumed, and correctable like any other row.
+ */
+enum class EventSource { TAP, VOICE, INFERRED }
 
 /**
  * Fixed 11-value taxonomy (PRD §9, Job 1). Do not add values without also

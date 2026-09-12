@@ -7,6 +7,7 @@ import com.etio.ot.data.local.entity.CaseEntity
 import com.etio.ot.data.local.entity.DelayRecordEntity
 import com.etio.ot.data.local.entity.GeneratedMessageEntity
 import com.etio.ot.data.model.Audience
+import com.etio.ot.ai.MessageDraftCoordinator
 import com.etio.ot.data.repository.CaseRepository
 import com.etio.ot.data.repository.DelayRepository
 import com.etio.ot.di.AiModule
@@ -14,6 +15,7 @@ import com.etio.ot.di.CoreModule
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -24,6 +26,7 @@ class MessagesViewModel(
     private val delayId: String,
     private val delays: DelayRepository = AiModule.delayRepository,
     private val cases: CaseRepository = CoreModule.caseRepository,
+    private val drafts: MessageDraftCoordinator = AiModule.draftCoordinator,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(MessagesUiState())
@@ -36,10 +39,10 @@ class MessagesViewModel(
             _state.value = _state.value.copy(record = record, case = case)
             record ?: return@launch
 
-            // Reuse anything already generated (e.g. reopened from the history strip).
-            val existing = delays.messagesFor(delayId)
+            // Messages arrive here as the coordinator writes them, whether it started
+            // at confirm time or on this screen.
             viewModelScope.launch {
-                existing.collect { rows ->
+                delays.messagesFor(delayId).collect { rows ->
                     if (rows.isNotEmpty()) {
                         _state.value = _state.value.copy(
                             messages = rows.associateBy { it.audience },
@@ -47,27 +50,28 @@ class MessagesViewModel(
                     }
                 }
             }
-            generate()
+
+            // Per-audience progress, never a blank state.
+            viewModelScope.launch {
+                drafts.pendingFor(delayId).collect { pending ->
+                    _state.value = _state.value.copy(
+                        pending = pending,
+                        generating = pending.isNotEmpty(),
+                    )
+                }
+            }
+
+            // Already running from the capture screen, or already complete: leave it be.
+            if (!drafts.isRunning(delayId) && delays.messagesFor(delayId).first().isEmpty()) {
+                generate()
+            }
         }
     }
 
+    /** Routed through the coordinator so a background run and a manual one cannot overlap. */
     fun generate() {
         val record = _state.value.record ?: return
-        if (_state.value.generating) return
-        viewModelScope.launch {
-            _state.value = _state.value.copy(
-                generating = true,
-                pending = Audience.demoOrder.toSet(),
-                messages = emptyMap(),
-            )
-            delays.draftMessages(record).collect { row ->
-                _state.value = _state.value.copy(
-                    messages = _state.value.messages + (row.audience to row),
-                    pending = _state.value.pending - row.audience,
-                )
-            }
-            _state.value = _state.value.copy(generating = false, pending = emptySet())
-        }
+        drafts.start(record)
     }
 
     fun regenerate(audience: Audience) {

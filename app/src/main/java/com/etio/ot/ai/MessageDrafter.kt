@@ -4,8 +4,12 @@ import android.util.Log
 import com.etio.ot.data.local.entity.CaseEntity
 import com.etio.ot.data.local.entity.DelayRecordEntity
 import com.etio.ot.data.model.Audience
+import com.etio.ot.domain.timing.ScheduleProjector
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * LLM Job 2 (PRD §9). One DelayRecord → four messages, generated SEQUENTIALLY and
@@ -20,39 +24,49 @@ class MessageDrafter(
     data class Draft(val audience: Audience, val body: String, val elapsedMs: Long)
 
     /** Emits one [Draft] per audience, in [Audience.demoOrder]. */
-    fun draftAll(record: DelayRecordEntity, case: CaseEntity?): Flow<Draft> = flow {
+    fun draftAll(
+        record: DelayRecordEntity,
+        case: CaseEntity?,
+        schedule: ScheduleProjector.Shift? = null,
+    ): Flow<Draft> = flow {
         val cfg = config.prompts().drafting
         Audience.demoOrder.forEach { audience ->
             val started = System.currentTimeMillis()
             val raw = engine.generate(
-                prompt = buildPrompt(audience, record, case),
+                prompt = buildPrompt(audience, record, case, schedule),
                 maxTokens = cfg.maxTokens,
                 temperature = cfg.temperature,
                 topK = cfg.topK,
             ).getOrElse {
                 Log.e(TAG, "Job 2 failed for $audience", it)
-                fallbackBody(audience, record, case)
+                fallbackBody(audience, record, case, schedule)
             }
-            val body = groundedBody(raw, audience, record, case)
+            val body = groundedBody(raw, audience, record, case, schedule)
             emit(Draft(audience, body, System.currentTimeMillis() - started))
         }
     }
 
-    suspend fun draftOne(audience: Audience, record: DelayRecordEntity, case: CaseEntity?): String {
+    suspend fun draftOne(
+        audience: Audience,
+        record: DelayRecordEntity,
+        case: CaseEntity?,
+        schedule: ScheduleProjector.Shift? = null,
+    ): String {
         val cfg = config.prompts().drafting
         val raw = engine.generate(
-            prompt = buildPrompt(audience, record, case),
+            prompt = buildPrompt(audience, record, case, schedule),
             maxTokens = cfg.maxTokens,
             temperature = cfg.temperature,
             topK = cfg.topK,
-        ).getOrElse { fallbackBody(audience, record, case) }
-        return groundedBody(raw, audience, record, case)
+        ).getOrElse { fallbackBody(audience, record, case, schedule) }
+        return groundedBody(raw, audience, record, case, schedule)
     }
 
     private fun buildPrompt(
         audience: Audience,
         record: DelayRecordEntity,
         case: CaseEntity?,
+        schedule: ScheduleProjector.Shift?,
     ): String {
         val prompts = config.prompts()
         val cfg = prompts.drafting
@@ -82,6 +96,22 @@ class MessageDrafter(
                     "${case?.theatreId ?: "?"}. Cause: ${record.code.display}, attributed to " +
                     "${record.attributedDept}. ${record.note}. Expected delay: $expectedDelay.",
             )
+            // Revised times are computed in pure Kotlin before we get here, so the
+            // model is restating a real clock time rather than being asked to do
+            // arithmetic it cannot be trusted with.
+            schedule?.let { shift ->
+                appendLine(
+                    "Revised start time for this case: ${clock(shift.delayed.revisedStartMs)}. " +
+                        "Use this exact time if you mention one.",
+                )
+                if (audience != Audience.FAMILY && shift.downstream.isNotEmpty()) {
+                    appendLine(
+                        "Knock-on: " + shift.downstream.joinToString("; ") {
+                            "case ${it.caseNumber} now ${clock(it.revisedStartMs)}"
+                        } + ".",
+                    )
+                }
+            }
             // The example goes last, right before generation starts, so the most
             // recent pattern the model has seen is natural prose, not the facts list.
             rule?.example?.let { ex ->
@@ -98,18 +128,24 @@ class MessageDrafter(
         audience: Audience,
         record: DelayRecordEntity,
         case: CaseEntity?,
+        schedule: ScheduleProjector.Shift? = null,
     ): String {
         val caseNo = case?.caseNumber ?: "?"
         val eta = record.estimatedMin?.let { "about $it minutes" } ?: "an unknown amount of time"
+        val revised = schedule?.let { " New start approx ${clock(it.delayed.revisedStartMs)}." }.orEmpty()
         return when (audience) {
-            Audience.SURGEON -> "Case $caseNo delayed $eta. ${record.code.display}."
+            Audience.SURGEON -> "Case $caseNo delayed $eta. ${record.code.display}.$revised"
             Audience.FAMILY -> "A short update: your family member is safe and still on today's list. " +
                 "The theatre team needs a little more time, so we expect to start $eta later than planned. " +
                 "We will update you as soon as they go in."
-            Audience.WARD -> "Case $caseNo delayed $eta — ${record.code.display}. Hold the send-for until confirmed."
-            Audience.ANAESTHESIA -> "Case $caseNo induction delayed $eta — ${record.code.display} (${record.attributedDept})."
+            Audience.WARD -> "Case $caseNo delayed $eta — ${record.code.display}. " +
+                "Hold the send-for until confirmed.$revised"
+            Audience.ANAESTHESIA -> "Case $caseNo induction delayed $eta — " +
+                "${record.code.display} (${record.attributedDept}).$revised"
         }
     }
+
+    private fun clock(ms: Long): String = TIME_FMT.format(Date(ms))
 
     /** Small models like to add a label, a fence, or an apology. Strip all three. */
     private fun clean(raw: String): String = raw
@@ -132,11 +168,12 @@ class MessageDrafter(
         audience: Audience,
         record: DelayRecordEntity,
         case: CaseEntity?,
+        schedule: ScheduleProjector.Shift? = null,
     ): String {
         val cleaned = clean(raw)
         if (isConsistent(cleaned, record.estimatedMin)) return cleaned
         Log.w(TAG, "Job 2 draft for $audience mentioned a duration inconsistent with the record; using fallback")
-        return fallbackBody(audience, record, case)
+        return fallbackBody(audience, record, case, schedule)
     }
 
     /**
@@ -158,6 +195,8 @@ class MessageDrafter(
 
     private companion object {
         const val TAG = "MessageDrafter"
+
+        val TIME_FMT = SimpleDateFormat("HH:mm", Locale.getDefault())
 
         val NUMBER_WORDS = mapOf(
             "one" to 1, "two" to 2, "three" to 3, "four" to 4, "five" to 5, "six" to 6,
