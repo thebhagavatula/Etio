@@ -1,5 +1,6 @@
 package com.etio.ot.ui.events
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,7 +30,7 @@ import java.util.Locale
  * Tap marks. Long-press opens correction (the affordance you will need on stage).
  * The next expected event is emphasised; already-marked events show their timestamp.
  */
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun EventGrid(
     marked: Map<EventType, Long>,
