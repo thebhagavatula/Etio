@@ -8,6 +8,7 @@ import com.etio.ot.data.local.dao.DelayRecordDao
 import com.etio.ot.data.local.dao.GeneratedMessageDao
 import com.etio.ot.data.local.entity.DelayRecordEntity
 import com.etio.ot.data.local.entity.GeneratedMessageEntity
+import com.etio.ot.domain.timing.ScheduleProjector
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
@@ -67,7 +68,7 @@ class DelayRepository(
     fun draftMessages(record: DelayRecordEntity): Flow<GeneratedMessageEntity> = flow {
         messageDao.clearForDelay(record.id)
         val case = caseRepository.getCase(record.caseId)
-        drafter.draftAll(record, case).collect { draft ->
+        drafter.draftAll(record, case, shiftFor(record)).collect { draft ->
             val row = GeneratedMessageEntity(
                 id = newId(),
                 delayRecordId = record.id,
@@ -80,9 +81,21 @@ class DelayRepository(
         }
     }
 
+    /**
+     * The revised schedule handed to Job 2. Computed here, in Kotlin, from the stated
+     * duration only — null when nothing was said, so no message can carry a made-up time.
+     */
+    suspend fun shiftFor(record: DelayRecordEntity): ScheduleProjector.Shift? =
+        ScheduleProjector.project(
+            cases = caseRepository.allCases(),
+            delayedCaseId = record.caseId,
+            estimatedMin = record.estimatedMin,
+            nowMs = clock.nowMs(),
+        )
+
     suspend fun regenerate(record: DelayRecordEntity, existing: GeneratedMessageEntity) {
         val case = caseRepository.getCase(record.caseId)
-        val body = drafter.draftOne(existing.audience, record, case)
+        val body = drafter.draftOne(existing.audience, record, case, shiftFor(record))
         messageDao.update(existing.copy(body = body, generatedAtMs = clock.nowMs(), copied = false))
     }
 
