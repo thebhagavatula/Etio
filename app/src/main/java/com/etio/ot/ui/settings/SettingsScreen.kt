@@ -1,6 +1,8 @@
 package com.etio.ot.ui.settings
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -73,6 +75,7 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = Etio.space.gutter),
             verticalArrangement = Arrangement.spacedBy(Etio.space.xs),
         ) {
@@ -111,6 +114,11 @@ fun SettingsScreen(
                     )
                 }
             }
+
+            Spacer(Modifier.height(Etio.space.xl))
+            SectionLabel("Diagnostics")
+            DiagnosticsSection()
+            Spacer(Modifier.height(Etio.space.xxl))
         }
     }
 

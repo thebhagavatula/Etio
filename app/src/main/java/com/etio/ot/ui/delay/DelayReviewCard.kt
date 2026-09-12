@@ -1,5 +1,7 @@
 package com.etio.ot.ui.delay
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -33,8 +36,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.etio.ot.ai.ConfidenceBand
 import com.etio.ot.data.local.entity.DelayRecordEntity
 import com.etio.ot.data.model.Avoidability
 import com.etio.ot.data.model.DelayCode
@@ -66,7 +72,14 @@ fun DelayReviewCard(
     onNotify: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var editing by remember(record.id) { mutableStateOf<Field?>(null) }
+    val band = ConfidenceBand.of(record.modelConfidence)
+    val needsAttention = ConfidenceBand.needsAttention(record.modelConfidence, record.fellBackToOther)
+
+    // A record the model could not place opens on the cause, already editable. She
+    // came here to fix it; making her find the edit button first is a tap spent on
+    // nothing. A confident record opens closed, as before.
+    var editing by remember(record.id) { mutableStateOf(if (needsAttention) Field.CODE else null) }
+    var showRawConfidence by remember(record.id) { mutableStateOf(false) }
     var transcriptDraft by remember(record.id) { mutableStateOf(record.transcriptRaw) }
     var noteDraft by remember(record.id) { mutableStateOf(record.note) }
     var estimateDraft by remember(record.id) { mutableStateOf(record.estimatedMin?.toString().orEmpty()) }
@@ -90,9 +103,13 @@ fun DelayReviewCard(
             Spacer(Modifier.height(Etio.space.m))
         }
 
+        // The band marks the three fields the model judged. The expected delay is
+        // gated by the transcript check rather than by the model's own certainty, and
+        // the note is her words quoted back, so neither carries it.
         Field(
             label = "Cause",
             value = record.code.display,
+            band = band,
             onEdit = { editing = if (editing == Field.CODE) null else Field.CODE },
         )
         if (editing == Field.CODE) {
@@ -110,6 +127,7 @@ fun DelayReviewCard(
         Field(
             label = "Department",
             value = record.attributedDept.ifBlank { "—" },
+            band = band,
             onEdit = { editing = if (editing == Field.DEPT) null else Field.DEPT },
         )
         if (editing == Field.DEPT) {
@@ -134,6 +152,7 @@ fun DelayReviewCard(
                 Avoidability.UNAVOIDABLE -> "No"
                 Avoidability.UNCLEAR -> "Unclear"
             },
+            band = band,
             onEdit = { editing = if (editing == Field.AVOIDABLE) null else Field.AVOIDABLE },
         )
         if (editing == Field.AVOIDABLE) {
@@ -215,20 +234,45 @@ fun DelayReviewCard(
                 enabled = transcriptDraft.isNotBlank() && transcriptDraft != record.transcriptRaw,
             ) { Text("Re-read that") }
         } else {
+            // Normally the evidence is subordinate: the fields are what she acts on.
+            // When the model could not place the utterance that ordering is wrong —
+            // her own words are now the most reliable thing on the card, so they get
+            // the same weight and the same ink as the fields above.
             Text(
                 record.transcriptRaw,
-                style = EtioMonoStyle,
-                color = Etio.colors.textSecondary,
+                style = if (needsAttention) EtioMonoStyle.copy(fontSize = 17.sp) else EtioMonoStyle,
+                color = if (needsAttention) Etio.colors.textPrimary else Etio.colors.textSecondary,
                 modifier = Modifier.spotlight(SpotlightTarget.TRANSCRIPT),
             )
         }
 
         Spacer(Modifier.height(Etio.space.s))
+        // Always shown, never rounded up, never suppressed when it is bad. Long-press
+        // gives the unrounded float — the two-decimal form is for reading, not a
+        // softer version of the number.
         Text(
-            "CONFIDENCE ${"%.2f".format(record.modelConfidence)}" +
-                if (record.userEdited) " · EDITED" else "",
+            text = buildString {
+                append("CONFIDENCE ")
+                append(if (showRawConfidence) record.modelConfidence.toString() else "%.2f".format(record.modelConfidence))
+                append(" · ")
+                append(
+                    when (band) {
+                        ConfidenceBand.CONFIDENT -> "CONFIDENT"
+                        ConfidenceBand.UNCERTAIN -> "UNCERTAIN"
+                        ConfidenceBand.LOW -> "LOW"
+                    },
+                )
+                if (record.userEdited) append(" · EDITED")
+            },
             style = MaterialTheme.typography.labelLarge,
-            color = Etio.colors.textSecondary,
+            color = when (band) {
+                ConfidenceBand.CONFIDENT -> Etio.colors.textSecondary
+                ConfidenceBand.UNCERTAIN -> Etio.colors.warning
+                ConfidenceBand.LOW -> Etio.colors.delay
+            },
+            modifier = Modifier.pointerInput(record.id) {
+                detectTapGestures(onLongPress = { showRawConfidence = !showRawConfidence })
+            },
         )
 
         Spacer(Modifier.height(Etio.space.gutter))
@@ -251,16 +295,48 @@ fun DelayReviewCard(
 
 private enum class Field { CODE, DEPT, AVOIDABLE, ETA, NOTE, TRANSCRIPT }
 
-/** Label above, value large, and a 44dp edit target that never moves. */
+/**
+ * Label above, value large, and a 44dp edit target that never moves.
+ *
+ * [band] decorates rather than obstructs. An uncertain field gets a 2dp amber rail and
+ * a four-character label; it is not disabled, not greyed, and not moved, because the
+ * model being unsure is not a reason to make the field harder to read. A low-confidence
+ * record is handled at the card level instead — it opens on the cause.
+ */
 @Composable
-private fun Field(label: String, value: String, onEdit: () -> Unit) {
+private fun Field(
+    label: String,
+    value: String,
+    onEdit: () -> Unit,
+    band: ConfidenceBand? = null,
+) {
+    val flagged = band == ConfidenceBand.UNCERTAIN
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.weight(1f)) {
-            Text(
-                label.uppercase(),
-                style = MaterialTheme.typography.labelLarge,
-                color = Etio.colors.textSecondary,
+        if (flagged) {
+            Spacer(
+                Modifier
+                    .width(2.dp)
+                    .height(44.dp)
+                    .background(Etio.colors.warning, RoundedCornerShape(1.dp)),
             )
+            Spacer(Modifier.width(Etio.space.m))
+        }
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    label.uppercase(),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Etio.colors.textSecondary,
+                )
+                if (flagged) {
+                    Spacer(Modifier.width(Etio.space.s))
+                    Text(
+                        "CHECK THIS",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Etio.colors.warning,
+                    )
+                }
+            }
             Text(value, style = MaterialTheme.typography.titleLarge)
         }
         IconButton(onClick = onEdit, modifier = Modifier.size(44.dp)) {

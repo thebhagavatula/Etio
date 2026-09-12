@@ -13,6 +13,7 @@ import com.etio.ot.data.repository.CaseRepository
 import com.etio.ot.data.repository.DelayRepository
 import com.etio.ot.di.AiModule
 import com.etio.ot.di.CoreModule
+import com.etio.ot.ai.InferenceTelemetry
 import com.etio.ot.ui.theme.InferenceSignal
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -221,6 +222,10 @@ class DelayCaptureViewModel(
      */
     fun confirm(onSaved: (String) -> Unit) {
         val record = _state.value.record ?: return
+        // The only number that answers "how do you know it works". Counted at the
+        // moment of confirmation, because an edit she made and then discarded is not
+        // a correction the model needed.
+        InferenceTelemetry.recordConfirmed(edited = record.userEdited)
         viewModelScope.launch {
             delays.save(record)
             drafts.start(record)
