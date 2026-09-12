@@ -89,6 +89,7 @@ fun CaseListScreen(
     val focusCase = DayFlow.focusCaseId(state.cases, state.metrics)
         ?.let { id -> state.cases.firstOrNull { it.id == id } }
     val focusMarks = focusCase?.let { state.metrics.forCase(it.id)?.marks }.orEmpty()
+    val dayComplete = DayFlow.isDayComplete(state.cases, state.metrics)
     val nextAction = DayFlow.nextAction(state.cases, state.metrics)
     val sendFor = DayFlow.sendForOffer(state.cases, state.metrics)
         ?.takeIf { it.caseId !in dismissedSendFor }
@@ -149,9 +150,15 @@ fun CaseListScreen(
                         Text(
                             text = buildString {
                                 append(state.cases.firstOrNull()?.theatreId ?: "—")
-                                activeCase?.let { append(" · Case ${it.caseNumber}") }
+                                focusCase?.let { append(" · Case ${it.caseNumber}") }
                                 append(" · ")
-                                append(state.metrics.runningVarianceMin.asDayStanding())
+                                append(
+                                    if (dayComplete) {
+                                        "day complete"
+                                    } else {
+                                        state.metrics.runningVarianceMin.asDayStanding()
+                                    },
+                                )
                             },
                             style = MaterialTheme.typography.titleMedium.tabular(),
                         )

@@ -7,7 +7,9 @@ import com.etio.ot.data.model.EventType
 import com.etio.ot.domain.timing.DayFlow
 import com.etio.ot.domain.timing.TimerEngine
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -92,6 +94,23 @@ class DayFlowTest {
         // not go blank because of it.
         assertNull(m.activeCaseId)
         assertEquals("b", DayFlow.focusCaseId(cases, m))
+    }
+
+    @Test
+    fun `the day is complete only once every case is marked out`() {
+        val cases = listOf(case("a", "1", 0), case("b", "2", 1))
+        val partial = listOf(event("e1", "a", EventType.PATIENT_IN_ROOM, 5))
+        assertFalse(DayFlow.isDayComplete(cases, metrics(cases, partial)))
+
+        val all = cases.flatMap { c ->
+            EventType.ordered.mapIndexed { i, type -> event("e-${c.id}-$i", c.id, type, i * 10) }
+        }
+        assertTrue(DayFlow.isDayComplete(cases, metrics(cases, all)))
+    }
+
+    @Test
+    fun `an empty list is not a complete day`() {
+        assertFalse(DayFlow.isDayComplete(emptyList(), metrics(emptyList(), emptyList())))
     }
 
     @Test

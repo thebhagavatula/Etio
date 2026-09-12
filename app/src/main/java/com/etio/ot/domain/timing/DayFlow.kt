@@ -70,6 +70,13 @@ object DayFlow {
                 ?.id
 
     /**
+     * Every case is marked out. The same condition that makes [DayMetrics.activeCaseId]
+     * null, named, so the status line can say so instead of quietly dropping a field.
+     */
+    fun isDayComplete(cases: List<CaseEntity>, metrics: DayMetrics): Boolean =
+        cases.any { it.status != CaseStatus.CANCELLED } && metrics.activeCaseId == null
+
+    /**
      * The first span in the day that has run long enough to be worth explaining.
      *
      * Arithmetic on spans the timers already computed — it asks a question, it never
