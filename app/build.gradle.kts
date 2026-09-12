@@ -58,6 +58,15 @@ android {
     androidResources {
         noCompress += listOf("task", "bin", "tflite")
     }
+
+    // Plain JVM unit tests (e.g. DelayJsonValidatorTest) hit android.util.Log through
+    // production code paths (warn-level fallback logging). Without this, any such call
+    // throws "Method w in android.util.Log not mocked" instead of returning quietly.
+    testOptions {
+        unitTests {
+            isReturnDefaultValues = true
+        }
+    }
 }
 
 ksp {
