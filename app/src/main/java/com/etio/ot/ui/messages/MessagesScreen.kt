@@ -6,46 +6,54 @@ import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.etio.ot.data.model.Audience
+import com.etio.ot.ui.theme.Etio
+import com.etio.ot.ui.theme.glass
 
 /**
- * PRD §7 F5 / §12. The demo moment: surgeon and family adjacent, so the difference
- * in register is visible without anyone explaining it.
+ * The demo moment, and the only screen whose layout is an argument.
  *
- * No sending. Copy and share-sheet only — per PRD §5, message delivery is a non-goal.
+ * Surgeon and family sit side by side in the top row, on screen together with no
+ * scrolling, because the point is not that four messages exist — it is that the same
+ * fact is said two completely different ways depending on who is reading. In a
+ * vertical list you have to remember the first one to notice.
+ *
+ * No glass anywhere here: this is text people will read closely and copy verbatim.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,17 +66,20 @@ fun MessagesScreen(
     val context = LocalContext.current
 
     Scaffold(
+        containerColor = Etio.colors.background,
         topBar = {
             TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                modifier = Modifier.glass(RoundedCornerShape(0.dp)),
                 title = {
                     Column {
-                        Text("Updates", style = MaterialTheme.typography.titleMedium)
+                        Text("Updates", style = MaterialTheme.typography.titleLarge)
                         state.record?.let { r ->
                             Text(
-                                "Case ${state.case?.caseNumber ?: "?"} · ${r.code.display}" +
-                                    (r.estimatedMin?.let { " · ${it} min" } ?: ""),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                ("Case ${state.case?.caseNumber ?: "?"} · ${r.code.display}" +
+                                    (r.estimatedMin?.let { " · $it min" } ?: "")).uppercase(),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = Etio.colors.textSecondary,
                             )
                         }
                     }
@@ -86,73 +97,149 @@ fun MessagesScreen(
             )
         },
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = Etio.space.m),
+            verticalArrangement = Arrangement.spacedBy(Etio.space.s),
         ) {
-            items(Audience.demoOrder, key = { it.name }) { audience ->
-                val message = state.messages[audience]
-                val isPending = audience in state.pending
+            // Row one is the comparison. Row two is the rest of the fan-out.
+            MessageRow(
+                left = Audience.SURGEON,
+                right = Audience.FAMILY,
+                state = state,
+                context = context,
+                viewModel = viewModel,
+                modifier = Modifier.weight(1f),
+            )
+            MessageRow(
+                left = Audience.WARD,
+                right = Audience.ANAESTHESIA,
+                state = state,
+                context = context,
+                viewModel = viewModel,
+                modifier = Modifier.weight(1f),
+            )
 
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(14.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                audience.display,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                            )
-                            Spacer(Modifier.weight(1f))
-                            if (isPending) {
-                                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                            } else if (message != null) {
-                                IconButton(onClick = {
-                                    copyToClipboard(context, audience.display, message.body)
-                                    viewModel.markCopied(message.id)
-                                }) {
-                                    Icon(Icons.Default.ContentCopy, contentDescription = "Copy")
-                                }
-                                IconButton(onClick = { share(context, message.body) }) {
-                                    Icon(Icons.Default.Share, contentDescription = "Share")
-                                }
-                                IconButton(onClick = { viewModel.regenerate(audience) }) {
-                                    Icon(Icons.Default.Refresh, contentDescription = "Regenerate")
-                                }
-                            }
-                        }
-                        Spacer(Modifier.padding(top = 6.dp))
-                        Text(
-                            text = message?.body ?: if (isPending) "Writing…" else "—",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = if (message == null) {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            } else {
-                                MaterialTheme.colorScheme.onSurface
-                            },
-                        )
-                        if (message?.copied == true) {
-                            Spacer(Modifier.padding(top = 4.dp))
-                            Text(
-                                "Copied",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                    }
+            state.record?.let { r ->
+                Text(
+                    "All four written from: “${r.transcriptRaw}”",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Etio.colors.textSecondary,
+                    modifier = Modifier.padding(vertical = Etio.space.s),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MessageRow(
+    left: Audience,
+    right: Audience,
+    state: MessagesUiState,
+    context: Context,
+    viewModel: MessagesViewModel,
+    modifier: Modifier = Modifier,
+) {
+    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(Etio.space.s)) {
+        listOf(left, right).forEach { audience ->
+            MessageCard(
+                audience = audience,
+                state = state,
+                context = context,
+                viewModel = viewModel,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun MessageCard(
+    audience: Audience,
+    state: MessagesUiState,
+    context: Context,
+    viewModel: MessagesViewModel,
+    modifier: Modifier = Modifier,
+) {
+    val message = state.messages[audience]
+    val isPending = audience in state.pending
+
+    Surface(
+        color = Etio.colors.surface,
+        shape = RoundedCornerShape(Etio.radius.card),
+        modifier = modifier,
+    ) {
+        Column(Modifier.padding(Etio.space.l)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    audience.display.uppercase(),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Etio.colors.accent,
+                    modifier = Modifier.weight(1f),
+                )
+                if (isPending) {
+                    CircularProgressIndicator(
+                        Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = Etio.colors.accent,
+                    )
                 }
             }
 
-            item {
-                state.record?.let { r ->
-                    Spacer(Modifier.padding(top = 8.dp))
-                    Text(
-                        "All four written from: “${r.transcriptRaw}”",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 4.dp),
-                    )
-                    Spacer(Modifier.width(4.dp))
+            Spacer(Modifier.height(Etio.space.s))
+
+            Text(
+                text = message?.body ?: if (isPending) "Writing…" else "—",
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (message == null) Etio.colors.textSecondary else Etio.colors.textPrimary,
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState()),
+            )
+
+            if (message != null) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = {
+                            copyToClipboard(context, audience.display, message.body)
+                            viewModel.markCopied(message.id)
+                        },
+                        modifier = Modifier.size(44.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.ContentCopy,
+                            contentDescription = "Copy the ${audience.display} message",
+                            tint = if (message.copied) Etio.colors.running else Etio.colors.textSecondary,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                    IconButton(
+                        onClick = { share(context, message.body) },
+                        modifier = Modifier.size(44.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.Share,
+                            contentDescription = "Share the ${audience.display} message",
+                            tint = Etio.colors.textSecondary,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                    IconButton(
+                        onClick = { viewModel.regenerate(audience) },
+                        modifier = Modifier.size(44.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = "Rewrite the ${audience.display} message",
+                            tint = Etio.colors.textSecondary,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
                 }
             }
         }
