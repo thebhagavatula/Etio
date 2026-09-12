@@ -62,6 +62,7 @@ AI=(
   "app/src/main/assets/config/prompts.json"
   "app/src/main/assets/config/taxonomy.json"
   "app/src/test/java/com/etio/ot/domain/DelayJsonValidatorTest.kt"
+  "app/src/test/java/com/etio/ot/ai/"
 )
 
 SAFETY=(
