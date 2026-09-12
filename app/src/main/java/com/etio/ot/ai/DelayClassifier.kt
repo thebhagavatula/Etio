@@ -1,7 +1,6 @@
 package com.etio.ot.ai
 
 import android.util.Log
-import com.etio.ot.data.config.ConfigProvider
 
 /**
  * LLM Job 1 (PRD §9). One utterance in, one validated [DelayJsonValidator.Parsed] out.
@@ -11,7 +10,7 @@ import com.etio.ot.data.config.ConfigProvider
  */
 class DelayClassifier(
     private val engine: LlmEngine,
-    private val config: ConfigProvider,
+    private val config: PromptSource,
 ) {
 
     suspend fun classify(transcript: String): DelayJsonValidator.Parsed {

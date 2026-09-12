@@ -1,7 +1,6 @@
 package com.etio.ot.ai
 
 import android.util.Log
-import com.etio.ot.data.config.ConfigProvider
 import com.etio.ot.data.local.entity.CaseEntity
 import com.etio.ot.data.local.entity.DelayRecordEntity
 import com.etio.ot.data.model.Audience
@@ -15,7 +14,7 @@ import kotlinx.coroutines.flow.flow
  */
 class MessageDrafter(
     private val engine: LlmEngine,
-    private val config: ConfigProvider,
+    private val config: PromptSource,
 ) {
 
     data class Draft(val audience: Audience, val body: String, val elapsedMs: Long)
