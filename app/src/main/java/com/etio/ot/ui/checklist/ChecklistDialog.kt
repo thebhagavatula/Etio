@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import com.etio.ot.data.config.ChecklistItem
 import com.etio.ot.data.local.entity.ChecklistRunEntity
 import com.etio.ot.data.model.ChecklistPhase
@@ -55,6 +56,7 @@ fun ChecklistDialog(
 
     AlertDialog(
         onDismissRequest = { /* deliberately non-dismissible */ },
+        properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
         title = {
             Column {
                 Text("WHO ${phase.display}", style = MaterialTheme.typography.titleLarge)
