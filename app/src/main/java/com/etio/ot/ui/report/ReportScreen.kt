@@ -3,6 +3,13 @@ package com.etio.ot.ui.report
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -17,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -35,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.etio.ot.ui.theme.Etio
 import com.etio.ot.ui.theme.EtioStatus
 
 /**
@@ -75,15 +84,31 @@ fun ReportScreen(
         ) {
 
             item {
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text(headline, style = MaterialTheme.typography.headlineMedium)
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Etio.colors.surface),
+                    shape = RoundedCornerShape(Etio.radius.card),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(Modifier.padding(Etio.space.card)) {
+                        // One number, larger than anything else in the app. Everything
+                        // below exists to say where it came from.
+                        Text(
+                            "MINUTES LOST",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = Etio.colors.textSecondary,
+                        )
+                        Text(
+                            "${report.lostMinutes}",
+                            style = MaterialTheme.typography.displaySmall,
+                            color = Etio.colors.delay,
+                        )
+                        Spacer(Modifier.padding(top = 8.dp))
+                        Text(headline, style = MaterialTheme.typography.bodyLarge)
                         Spacer(Modifier.padding(top = 10.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                             Stat("Cases", "${report.casesCompleted}/${report.casesScheduled}")
                             Stat("Scheduled", "${report.scheduledMinutes}m")
                             Stat("Actual", "${report.actualMinutes}m")
-                            Stat("Lost", "${report.lostMinutes}m", EtioStatus.late)
                         }
                         report.firstCaseStartDelayMin?.let {
                             Spacer(Modifier.padding(top = 8.dp))
@@ -105,34 +130,32 @@ fun ReportScreen(
                 }
             }
 
-            if (report.byDept.isNotEmpty()) {
+            if (report.byCode.isNotEmpty()) {
                 item { SectionTitle("Where the time went") }
-                items(report.byDept, key = { it.dept }) { row ->
-                    Card(Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(14.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(row.dept, style = MaterialTheme.typography.titleMedium)
-                                Spacer(Modifier.weight(1f))
-                                Text(
-                                    "${row.minutes} min",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
+                item {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Etio.colors.surface),
+                        shape = RoundedCornerShape(Etio.radius.card),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Column(Modifier.padding(Etio.space.card)) {
+                            StackedBar(report.byCode, report.lostMinutes)
+                            Spacer(Modifier.padding(top = 14.dp))
+                            report.byCode.forEachIndexed { index, row ->
+                                LegendRow(
+                                    swatch = codeColour(index),
+                                    label = row.code.display,
+                                    // Attribution belongs on the row, not in a separate
+                                    // table someone has to cross-reference.
+                                    dept = report.attributions
+                                        .filter { it.code == row.code }
+                                        .groupBy { it.dept }
+                                        .maxByOrNull { (_, rows) -> rows.sumOf { it.minutes } }
+                                        ?.key,
+                                    minutes = row.minutes,
+                                    occurrences = row.occurrences,
                                 )
                             }
-                            Spacer(Modifier.padding(top = 6.dp))
-                            LinearProgressIndicator(
-                                progress = {
-                                    if (report.lostMinutes == 0) 0f
-                                    else row.minutes.toFloat() / report.lostMinutes
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                            Spacer(Modifier.padding(top = 4.dp))
-                            Text(
-                                "${row.occurrences} occurrence${if (row.occurrences == 1) "" else "s"}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
                         }
                     }
                 }
@@ -183,16 +206,93 @@ fun ReportScreen(
 private fun Stat(label: String, value: String, color: androidx.compose.ui.graphics.Color? = null) {
     Column {
         Text(
-            label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            label.uppercase(),
+            style = MaterialTheme.typography.labelLarge,
+            color = Etio.colors.textSecondary,
         )
         Text(
             value,
             style = MaterialTheme.typography.titleLarge,
-            color = color ?: MaterialTheme.colorScheme.onSurface,
+            color = color ?: Etio.colors.textPrimary,
         )
     }
+}
+
+/**
+ * The whole day's lost time in one bar, segmented by cause. Opaque, no animation —
+ * this is a figure to read, and it is the last thing anyone sees.
+ */
+@Composable
+private fun StackedBar(rows: List<com.etio.ot.domain.report.CodeTotal>, total: Int) {
+    if (total <= 0) return
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(16.dp)
+            .clip(RoundedCornerShape(8.dp)),
+    ) {
+        rows.forEachIndexed { index, row ->
+            Box(
+                Modifier
+                    .weight(row.minutes.coerceAtLeast(1).toFloat())
+                    .fillMaxHeight()
+                    .background(codeColour(index)),
+            )
+        }
+    }
+}
+
+@Composable
+private fun LegendRow(
+    swatch: androidx.compose.ui.graphics.Color,
+    label: String,
+    dept: String?,
+    minutes: Int,
+    occurrences: Int,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+    ) {
+        Box(
+            Modifier
+                .size(12.dp)
+                .clip(RoundedCornerShape(3.dp))
+                .background(swatch),
+        )
+        Spacer(Modifier.padding(start = 12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(label, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                buildString {
+                    dept?.let { append(it.uppercase()).append(" · ") }
+                    append("$occurrences OCCURRENCE")
+                    if (occurrences != 1) append("S")
+                },
+                style = MaterialTheme.typography.labelLarge,
+                color = Etio.colors.textSecondary,
+            )
+        }
+        Text("$minutes min", style = MaterialTheme.typography.titleMedium)
+    }
+}
+
+/**
+ * Cause colours. Deliberately excludes the safety hue, which belongs to the WHO
+ * checklist and appears nowhere else in the app.
+ */
+@Composable
+private fun codeColour(index: Int): androidx.compose.ui.graphics.Color {
+    val palette = listOf(
+        Etio.colors.delay,
+        Etio.colors.warning,
+        Etio.colors.accent,
+        Etio.colors.running,
+        Etio.colors.textSecondary,
+    )
+    return palette[index % palette.size]
 }
 
 @Composable
