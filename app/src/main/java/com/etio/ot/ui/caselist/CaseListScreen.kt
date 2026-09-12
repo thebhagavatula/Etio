@@ -28,6 +28,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -40,6 +41,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.etio.ot.core.formatSignedMinutes
 import com.etio.ot.domain.timing.TimerEngine
+import com.etio.ot.data.local.entity.EventEntity
+import com.etio.ot.data.model.EventSource
 import com.etio.ot.data.model.EventType
 import com.etio.ot.ui.checklist.ChecklistHost
 import com.etio.ot.ui.events.EventGrid
@@ -60,6 +63,8 @@ fun CaseListScreen(
     val haptics = LocalHapticFeedback.current
     var confirmReset by remember { mutableStateOf(false) }
     var showEventSheet by remember { mutableStateOf(false) }
+    var editingEvent by remember { mutableStateOf<EventEntity?>(null) }
+    val dismissedAssumptions = remember { mutableStateListOf<String>() }
     val sheetState = rememberModalBottomSheetState()
 
     // Everything the bottom bar needs, derived from the same metrics the timers use.
@@ -132,6 +137,9 @@ fun CaseListScreen(
                     onCaptureDelay = { onCaptureDelay(case.id) },
                     onOpenDelay = onOpenMessages,
                     modifier = Modifier.fillMaxWidth(),
+                    onSetEventTime = { editingEvent = it },
+                    dismissedAssumptions = dismissedAssumptions.toSet(),
+                    onDismissAssumption = { dismissedAssumptions.add(it) },
                 )
             }
             item {
@@ -174,11 +182,27 @@ fun CaseListScreen(
                     onLongPress = { type ->
                         state.eventsByCase[activeCase.id].orEmpty()
                             .firstOrNull { it.type == type }
-                            ?.let { viewModel.correctEvent(it, it.timestampMs) }
+                            ?.let { editingEvent = it }
                     },
+                    inferred = state.eventsByCase[activeCase.id].orEmpty()
+                        .filter { it.source == EventSource.INFERRED }
+                        .map { it.type }
+                        .toSet(),
                 )
             }
         }
+    }
+
+    editingEvent?.let { event ->
+        EventTimeDialog(
+            event = event,
+            onDismiss = { editingEvent = null },
+            onConfirm = { correctedMs ->
+                viewModel.correctEvent(event, correctedMs)
+                dismissedAssumptions.add(event.id)
+                editingEvent = null
+            },
+        )
     }
 
     if (confirmReset) {

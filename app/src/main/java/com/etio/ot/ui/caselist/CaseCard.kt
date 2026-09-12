@@ -1,5 +1,6 @@
 package com.etio.ot.ui.caselist
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -18,7 +19,9 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -30,6 +33,7 @@ import com.etio.ot.core.formatSignedMinutes
 import com.etio.ot.data.local.entity.CaseEntity
 import com.etio.ot.data.local.entity.DelayRecordEntity
 import com.etio.ot.data.local.entity.EventEntity
+import com.etio.ot.data.model.EventSource
 import com.etio.ot.data.model.EventType
 import com.etio.ot.domain.timing.CaseMetrics
 import com.etio.ot.ui.theme.EtioStatus
@@ -47,6 +51,9 @@ fun CaseCard(
     onCaptureDelay: () -> Unit,
     onOpenDelay: (String) -> Unit,
     modifier: Modifier = Modifier,
+    onSetEventTime: (EventEntity) -> Unit = {},
+    dismissedAssumptions: Set<String> = emptySet(),
+    onDismissAssumption: (String) -> Unit = {},
 ) {
     val timeFmt = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
 
@@ -105,6 +112,19 @@ fun CaseCard(
                 }
             }
 
+            // Every event the app filled in states itself, until she dismisses it or
+            // sets the real time. Nothing inferred happens quietly.
+            events.filter { it.source == EventSource.INFERRED && it.id !in dismissedAssumptions }
+                .sortedBy { it.type.ordinal }
+                .forEach { assumed ->
+                    Spacer(Modifier.padding(top = 8.dp))
+                    AssumedEventChip(
+                        label = "${assumed.type.label} assumed at ${timeFmt.format(Date(assumed.timestampMs))}",
+                        onSetTime = { onSetEventTime(assumed) },
+                        onDismiss = { onDismissAssumption(assumed.id) },
+                    )
+                }
+
             // The grid moved to the "Other event" sheet: the card states where the
             // case is, the bottom bar decides what happens next.
             metrics?.marks?.maxByOrNull { it.value }?.let { (type, at) ->
@@ -149,6 +169,41 @@ fun CaseCard(
                 Icon(Icons.Default.Mic, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
                 Text("What's holding it up?")
+            }
+        }
+    }
+}
+
+/**
+ * An inferred write, said out loud. "Tap to set" is the correction path; dismissing
+ * only hides the chip — the event itself stays in the timeline, italicised.
+ */
+@Composable
+private fun AssumedEventChip(
+    label: String,
+    onSetTime: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.16f),
+        shape = MaterialTheme.shapes.small,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 10.dp),
+        ) {
+            Text(
+                "$label — tap to set",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable(onClick = onSetTime)
+                    .padding(vertical = 10.dp),
+            )
+            TextButton(onClick = onDismiss) {
+                Text("Dismiss", style = MaterialTheme.typography.labelSmall)
             }
         }
     }

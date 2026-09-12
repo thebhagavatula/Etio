@@ -16,6 +16,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import java.util.Calendar
 
+/** What a single mark actually wrote: the event asked for, plus anything filled in behind it. */
+data class MarkResult(val event: EventEntity, val inferred: List<EventEntity>)
+
 class CaseRepository(
     private val caseDao: CaseDao,
     private val eventDao: EventDao,
@@ -57,12 +60,25 @@ class CaseRepository(
         seedIfEmpty()
     }
 
+    /**
+     * Marks [type], and fills in any earlier event that was never marked rather than
+     * blocking the coordinator or dropping the gap on the floor.
+     *
+     * Missing events are spaced evenly between the last thing that was marked and this
+     * one, which keeps the sequence monotonic without pretending to know more than
+     * arithmetic can. They are written with [EventSource.INFERRED], surfaced as
+     * assumptions in the UI, and correctable like any other row.
+     */
     suspend fun markEvent(
         caseId: String,
         type: EventType,
         atMs: Long = clock.nowMs(),
         source: EventSource = EventSource.TAP,
-    ): EventEntity {
+    ): MarkResult {
+        val live = eventDao.getLive().filter { it.caseId == caseId }
+        val inferred = inferMissing(caseId, type, atMs, live)
+        inferred.forEach { eventDao.insert(it) }
+
         val event = EventEntity(
             id = newId(),
             caseId = caseId,
@@ -71,12 +87,44 @@ class CaseRepository(
             source = source,
         )
         eventDao.insert(event)
+
+        // Earliest first, so PATIENT_OUT still wins when a whole case is caught up at once.
+        (inferred.map { it.type } + type).forEach { applyStatus(caseId, it) }
+        return MarkResult(event, inferred)
+    }
+
+    private fun inferMissing(
+        caseId: String,
+        type: EventType,
+        atMs: Long,
+        live: List<EventEntity>,
+    ): List<EventEntity> {
+        val marked = live.map { it.type }.toSet()
+        val missing = EventType.ordered.filter { it.ordinal < type.ordinal && it !in marked }
+        if (missing.isEmpty()) return emptyList()
+
+        val anchor = live.filter { it.type.ordinal < type.ordinal }
+            .maxOfOrNull { it.timestampMs } ?: atMs
+        val gap = (atMs - anchor).coerceAtLeast(0L)
+        val step = gap / (missing.size + 1)
+
+        return missing.mapIndexed { index, missingType ->
+            EventEntity(
+                id = newId(),
+                caseId = caseId,
+                type = missingType,
+                timestampMs = anchor + step * (index + 1),
+                source = EventSource.INFERRED,
+            )
+        }
+    }
+
+    private suspend fun applyStatus(caseId: String, type: EventType) {
         when (type) {
             EventType.PATIENT_IN_ROOM -> caseDao.updateStatus(caseId, CaseStatus.IN_PROGRESS)
             EventType.PATIENT_OUT -> caseDao.updateStatus(caseId, CaseStatus.COMPLETED)
             else -> Unit
         }
-        return event
     }
 
     /** Append-only correction (long-press on the stage). */
