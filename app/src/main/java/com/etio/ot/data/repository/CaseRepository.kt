@@ -51,7 +51,7 @@ class CaseRepository(
         caseDao.upsertAll(rows)
     }
 
-    /** Wipes everything and re-seeds. The button you press between rehearsals. */
+    /** Wipes everything and re-seeds. What the hidden reset gesture calls between rehearsals. */
     suspend fun resetDay() {
         caseDao.clear() // cascades to events, delays, checklist runs, messages
         seedIfEmpty()

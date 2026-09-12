@@ -49,11 +49,14 @@ fun DelayReviewCard(
     onAvoidableChange: (Avoidability) -> Unit,
     onEstimateChange: (Int?) -> Unit,
     onNoteChange: (String) -> Unit,
+    onTranscriptCorrected: (String) -> Unit,
     onDiscard: () -> Unit,
     onNotify: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var expandCodes by remember { mutableStateOf(false) }
+    var fixingTranscript by remember(record.id) { mutableStateOf(false) }
+    var transcriptDraft by remember(record.id) { mutableStateOf(record.transcriptRaw) }
     var noteDraft by remember(record.id) { mutableStateOf(record.note) }
     var estimateDraft by remember(record.id) { mutableStateOf(record.estimatedMin?.toString().orEmpty()) }
     val depts = remember { CoreModule.config.taxonomy().departmentHints }
@@ -177,13 +180,37 @@ fun DelayReviewCard(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Column(Modifier.padding(12.dp)) {
-                    Text(
-                        "What was actually said",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "What was actually said",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.weight(1f))
+                        TextButton(onClick = { fixingTranscript = !fixingTranscript }) {
+                            Text(if (fixingTranscript) "Cancel" else "Fix wording")
+                        }
+                    }
                     Spacer(Modifier.padding(top = 4.dp))
-                    Text("“${record.transcriptRaw}”", style = MaterialTheme.typography.bodyMedium)
+                    if (fixingTranscript) {
+                        // Correcting the words re-runs Job 1 — the card's fields have to
+                        // keep following from the transcript printed beneath them.
+                        OutlinedTextField(
+                            value = transcriptDraft,
+                            onValueChange = { transcriptDraft = it },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        TextButton(
+                            onClick = {
+                                fixingTranscript = false
+                                onTranscriptCorrected(transcriptDraft)
+                            },
+                            enabled = transcriptDraft.isNotBlank() &&
+                                transcriptDraft != record.transcriptRaw,
+                        ) { Text("Re-read that") }
+                    } else {
+                        Text("“${record.transcriptRaw}”", style = MaterialTheme.typography.bodyMedium)
+                    }
                     Spacer(Modifier.padding(top = 6.dp))
                     Text(
                         "confidence ${"%.2f".format(record.modelConfidence)}" +
