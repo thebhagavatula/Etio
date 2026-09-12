@@ -1,5 +1,6 @@
 package com.etio.ot.ui.checklist
 
+import android.util.Log
 import com.etio.ot.data.config.ChecklistItem
 import com.etio.ot.data.local.entity.ChecklistRunEntity
 import com.etio.ot.data.model.ChecklistPhase
@@ -27,6 +28,7 @@ class ChecklistGateController(
     private val scope: CoroutineScope,
     private val checklists: ChecklistRepository = SafetyModule.checklistRepository,
 ) {
+    private val tag = "ChecklistGateController"
 
     data class Prompt(
         val caseId: String,
@@ -46,43 +48,65 @@ class ChecklistGateController(
      * already opened the blocking phase and set a message, so the caller just stops.
      */
     suspend fun allows(caseId: String, next: EventType, markedEvents: Set<EventType>): Boolean {
-        val blocking = checklists.gateFor(caseId, next, markedEvents) ?: return true
-        _message.value = "${blocking.display} must be completed before marking ${next.label}."
-        _prompt.value = Prompt(caseId, blocking, checklists.items(blocking), checklists.get(caseId, blocking))
-        return false
+        return runCatching {
+            val blocking = checklists.gateFor(caseId, next, markedEvents) ?: return@runCatching true
+            _message.value = "${blocking.display} must be completed before marking ${next.label}."
+            _prompt.value = Prompt(caseId, blocking, checklists.items(blocking), checklists.get(caseId, blocking))
+            false
+        }.getOrElse { e ->
+            Log.e(tag, "Failed to evaluate gate for event $next", e)
+            true // Allow on failure to prevent hard blocking the user
+        }
     }
 
     /** Call immediately after a successful mark. Opens the phase that event triggers, if any. */
     fun onEventMarked(caseId: String, type: EventType) {
         val phase = ChecklistPhase.forEvent(type) ?: return
         scope.launch {
-            _prompt.value = Prompt(caseId, phase, checklists.items(phase), checklists.openPhase(caseId, phase))
+            runCatching {
+                _prompt.value = Prompt(caseId, phase, checklists.items(phase), checklists.openPhase(caseId, phase))
+            }.onFailure { e -> Log.e(tag, "Failed to open phase $phase", e) }
         }
     }
 
     /** Reopen a phase on demand — e.g. from a badge on the case card. */
     fun open(caseId: String, phase: ChecklistPhase) {
         scope.launch {
-            _prompt.value = Prompt(caseId, phase, checklists.items(phase), checklists.openPhase(caseId, phase))
+            runCatching {
+                _prompt.value = Prompt(caseId, phase, checklists.items(phase), checklists.openPhase(caseId, phase))
+            }.onFailure { e -> Log.e(tag, "Failed to open phase $phase on demand", e) }
         }
     }
 
     fun toggle(itemId: String) {
         val current = _prompt.value ?: return
         scope.launch {
-            checklists.toggleItem(current.caseId, current.phase, itemId)
-            _prompt.value = current.copy(run = checklists.get(current.caseId, current.phase))
+            runCatching {
+                checklists.toggleItem(current.caseId, current.phase, itemId)
+                checklists.get(current.caseId, current.phase)
+            }.onSuccess { run ->
+                _prompt.value = current.copy(run = run)
+            }.onFailure { e ->
+                Log.e(tag, "Failed to toggle item $itemId", e)
+            }
         }
     }
 
     fun complete() {
         val current = _prompt.value ?: return
         scope.launch {
-            if (checklists.complete(current.caseId, current.phase)) {
-                _prompt.value = null
-                _message.value = null
-            } else {
-                _message.value = "Confirm every critical item, or skip with a reason."
+            runCatching {
+                checklists.complete(current.caseId, current.phase)
+            }.onSuccess { success ->
+                if (success) {
+                    _prompt.value = null
+                    _message.value = null
+                } else {
+                    _message.value = "Confirm every critical item, or skip with a reason."
+                }
+            }.onFailure { e ->
+                Log.e(tag, "Failed to complete phase ${current.phase}", e)
+                _message.value = "An error occurred while saving."
             }
         }
     }
@@ -90,9 +114,15 @@ class ChecklistGateController(
     fun skip(reason: String) {
         val current = _prompt.value ?: return
         scope.launch {
-            checklists.skip(current.caseId, current.phase, reason)
-            _prompt.value = null
-            _message.value = null
+            runCatching {
+                checklists.skip(current.caseId, current.phase, reason)
+            }.onSuccess {
+                _prompt.value = null
+                _message.value = null
+            }.onFailure { e ->
+                Log.e(tag, "Failed to skip phase ${current.phase}", e)
+                _message.value = "An error occurred while saving."
+            }
         }
     }
 

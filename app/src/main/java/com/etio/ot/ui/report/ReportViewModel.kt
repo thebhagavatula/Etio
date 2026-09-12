@@ -1,5 +1,6 @@
 package com.etio.ot.ui.report
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -21,31 +22,43 @@ class ReportViewModel(
     private val delays: DelayRepository = AiModule.delayRepository,
 ) : ViewModel() {
 
-    private val _report = MutableStateFlow(EndOfDayReport.Empty)
-    val report: StateFlow<EndOfDayReport> = _report.asStateFlow()
+    sealed interface UiState {
+        data object Loading : UiState
+        data class Success(val report: EndOfDayReport, val headline: String) : UiState
+        data class Error(val message: String) : UiState
+    }
 
-    private val _headline = MutableStateFlow("")
-    val headline: StateFlow<String> = _headline.asStateFlow()
+    private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
+    val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
     init { refresh() }
 
     fun refresh() {
         viewModelScope.launch {
-            val caseRows = cases.allCases()
-            val eventRows = cases.liveEvents()
-            val delayRows = delays.allDelays()
-            val metrics = TimerEngine.compute(caseRows, eventRows)
-            val built = EndOfDayReportBuilder.build(caseRows, delayRows, metrics)
-            _report.value = built
-            _headline.value = EndOfDayReportBuilder.headline(built)
+            _uiState.value = UiState.Loading
+            runCatching {
+                val caseRows = cases.allCases()
+                val eventRows = cases.liveEvents()
+                val delayRows = delays.allDelays()
+                val metrics = TimerEngine.compute(caseRows, eventRows)
+                val built = EndOfDayReportBuilder.build(caseRows, delayRows, metrics)
+                val headline = EndOfDayReportBuilder.headline(built)
+                UiState.Success(built, headline)
+            }.onSuccess { state ->
+                _uiState.value = state
+            }.onFailure { e ->
+                Log.e("ReportViewModel", "Failed to build report", e)
+                _uiState.value = UiState.Error("Failed to build the end of day report.")
+            }
         }
     }
 
     /** Plain-text export for the Office Kit bridge (F8) and for pasting into a message. */
     fun asPlainText(): String {
-        val r = _report.value
+        val state = _uiState.value as? UiState.Success ?: return "Report not ready."
+        val r = state.report
         return buildString {
-            appendLine(_headline.value)
+            appendLine(state.headline)
             appendLine()
             appendLine("Cases: ${r.casesCompleted}/${r.casesScheduled} completed")
             appendLine("Scheduled: ${r.scheduledMinutes} min · Actual: ${r.actualMinutes} min")
