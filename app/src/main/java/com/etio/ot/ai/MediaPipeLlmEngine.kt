@@ -72,6 +72,13 @@ class MediaPipeLlmEngine(
 
     @Volatile private var cloneSupported: Boolean = true
 
+    /** Set by the eval harness to measure the two paths against each other. */
+    @Volatile private var forceFullPrefill: Boolean = false
+
+    override fun setForceFullPrefill(force: Boolean) {
+        forceFullPrefill = force
+    }
+
     private class Base(
         val session: LlmInferenceSession,
         val profile: DecodeProfile,
@@ -266,7 +273,7 @@ class MediaPipeLlmEngine(
      */
     private fun answer(profile: DecodeProfile, stablePrefix: String, variableSuffix: String): String {
         val engine = inference ?: error("Engine not ready")
-        val base = bases[profile.name]
+        val base = if (forceFullPrefill) null else bases[profile.name]
 
         guardBudget(profile, base?.session, variableSuffix)
 

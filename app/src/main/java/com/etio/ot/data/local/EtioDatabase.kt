@@ -25,7 +25,8 @@ import com.etio.ot.data.local.entity.GeneratedMessageEntity
         GeneratedMessageEntity::class,
     ],
     // 2: grounding flags on delay_records (T3).
-    version = 2,
+    // 3: agreementRatio from self-consistency voting (T2).
+    version = 3,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)

@@ -31,6 +31,38 @@ class DelayClassifier(
         ground(transcript, classifyRaw(transcript))
 
     /**
+     * Classify the same utterance [samples] times and aggregate by majority.
+     *
+     * The samples are drawn at the profile's own temperature, which is what makes the
+     * spread meaningful: at temperature 0.1 three runs agree because the sampler had
+     * nowhere else to go, not because the model was sure. Grounding runs once, on the
+     * merged record, so a field only has to survive the check that will be shown.
+     *
+     * Sequential on purpose. MediaPipe sessions are not safe to use concurrently, and
+     * two overlapping decodes on a loaner phone is how the demo ends.
+     */
+    suspend fun classifyVoted(transcript: String, samples: Int): SelfConsistency.Outcome {
+        if (samples <= 1) {
+            val single = classify(transcript)
+            return SelfConsistency.Outcome(single, 1f, SelfConsistency.Agreement.HIGH, listOf(single))
+        }
+
+        val started = System.currentTimeMillis()
+        val drawn = (1..samples).map { classifyRaw(transcript) }
+        val outcome = SelfConsistency.aggregate(drawn)
+        val merged = ground(transcript, outcome.merged)
+
+        Log.i(
+            TAG,
+            "Job 1 voted x$samples in ${System.currentTimeMillis() - started}ms: " +
+                "${outcome.agreement} ratio=${outcome.agreementRatio} spread=${SelfConsistency.spread(drawn)}",
+        )
+        InferenceTelemetry.vote(outcome.agreement.name)
+
+        return outcome.copy(merged = merged)
+    }
+
+    /**
      * The invariant, applied to whatever came back: a number nobody said is dropped, a
      * note containing words nobody said is replaced by words she did say, and a
      * department nobody named falls back to the code's own default.

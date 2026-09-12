@@ -19,6 +19,9 @@ object Routes {
     const val REPORT = "report"
     const val SETTINGS = "settings"
 
+    /** Debug only. Reached by long-pressing the version string in settings. */
+    const val EVAL = "debug/eval"
+
     const val ARG_CASE_ID = "caseId"
     const val ARG_DELAY_ID = "delayId"
 

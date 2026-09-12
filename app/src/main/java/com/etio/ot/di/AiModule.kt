@@ -52,6 +52,9 @@ object AiModule {
 
     val speechCapture: SpeechCapture by lazy { AndroidSpeechCapture(ServiceLocator.appContext) }
 
+    /** The eval harness runs the real classifier, not a copy of it. */
+    val classifierForEval: DelayClassifier get() = classifier
+
     private val classifier: DelayClassifier by lazy {
         DelayClassifier(llmEngine, CoreModule.config.asPromptSource())
     }

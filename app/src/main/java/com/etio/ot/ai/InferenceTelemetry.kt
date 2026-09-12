@@ -47,6 +47,8 @@ object InferenceTelemetry {
         val parseFallbacks: Int = 0,
         /** Fields the grounding verifier refused, by field name. */
         val groundingRejections: Map<String, Int> = emptyMap(),
+        /** How often the samples agreed, by band. */
+        val agreementBands: Map<String, Int> = emptyMap(),
     ) {
         fun callsFor(profile: String): List<Call> = calls.filter { it.profile == profile }
 
@@ -94,6 +96,10 @@ object InferenceTelemetry {
      * invents durations" and "the model invents notes" are different problems with
      * different fixes.
      */
+    fun vote(band: String) = _snapshot.update {
+        it.copy(agreementBands = it.agreementBands + (band to (it.agreementBands[band] ?: 0) + 1))
+    }
+
     fun groundingRejection(field: String) = _snapshot.update {
         it.copy(groundingRejections = it.groundingRejections + (field to (it.groundingRejections[field] ?: 0) + 1))
     }

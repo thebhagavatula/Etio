@@ -1,0 +1,219 @@
+{
+  "notes": "Gold labels for the on-device eval. None of these appear in prompts.json few_shot — reusing the examples would measure memorisation, not classification. expected_min is null wherever no duration was spoken; a model that fills one in is wrong even if the number is plausible. ambiguous entries carry alternate_code: either counts as correct.",
+  "items": [
+    {
+      "id": "e01",
+      "utterance": "trolley is not there, ward boy went for tea, patient still sitting upstairs",
+      "expected_code": "PORTER_TRANSPORT",
+      "expected_dept": "Portering",
+      "expected_min": null
+    },
+    {
+      "id": "e02",
+      "utterance": "madam the drum has not come from TSU, they are saying twenty five minutes minimum",
+      "expected_code": "STERILE_SET_UNAVAILABLE",
+      "expected_dept": "CSSD",
+      "expected_min": 25
+    },
+    {
+      "id": "e03",
+      "utterance": "sir has gone for one emergency in casualty, he will come after that only",
+      "expected_code": "SURGEON_LATE",
+      "expected_dept": "Surgery",
+      "expected_min": null
+    },
+    {
+      "id": "e04",
+      "utterance": "patient ka consent form signature nahi hai, relatives are downstairs, ward is calling them",
+      "expected_code": "CONSENT_INCOMPLETE",
+      "expected_dept": "Ward",
+      "expected_min": null
+    },
+    {
+      "id": "e05",
+      "utterance": "spinal has failed, they are converting to general, give it another twenty minutes",
+      "expected_code": "ANAESTHESIA_DELAY",
+      "expected_dept": "Anaesthesia",
+      "expected_min": 20
+    },
+    {
+      "id": "e06",
+      "utterance": "ICU has no bed, they are saying wait till evening shift, post op cannot go anywhere",
+      "expected_code": "ICU_BED_UNAVAILABLE",
+      "expected_dept": "ICU",
+      "expected_min": null
+    },
+    {
+      "id": "e07",
+      "utterance": "two units are not crossmatched yet, blood bank is asking for fresh sample",
+      "expected_code": "BLOOD_PRODUCTS",
+      "expected_dept": "Blood Bank",
+      "expected_min": null
+    },
+    {
+      "id": "e08",
+      "utterance": "the light head is loose, biomed came and went, he is bringing one spare in half an hour",
+      "expected_code": "EQUIPMENT_FAILURE",
+      "expected_dept": "Biomedical",
+      "expected_min": 30
+    },
+    {
+      "id": "e09",
+      "utterance": "first case is still open, they found something inside, minimum forty minutes more",
+      "expected_code": "PREVIOUS_CASE_OVERRUN",
+      "expected_dept": "Theatre",
+      "expected_min": 40
+    },
+    {
+      "id": "e10",
+      "utterance": "patient had breakfast at seven, sister did not tell anyone, now anaesthesia is refusing",
+      "expected_code": "PATIENT_NOT_READY",
+      "expected_dept": "Ward",
+      "expected_min": null
+    },
+    {
+      "id": "e11",
+      "utterance": "housekeeping has not done the fumigation, they will take one hour after the last case",
+      "expected_code": "OTHER",
+      "expected_dept": "Housekeeping",
+      "expected_min": 60
+    },
+    {
+      "id": "e12",
+      "utterance": "power fluctuation happened, the whole panel tripped, electrical is checking",
+      "expected_code": "OTHER",
+      "expected_dept": "Unattributed",
+      "expected_min": null
+    },
+    {
+      "id": "e13",
+      "utterance": "there is some confusion in the list order, nobody knows which case is next",
+      "expected_code": "OTHER",
+      "expected_dept": "Theatre",
+      "expected_min": null
+    },
+    {
+      "id": "e14",
+      "utterance": "the AC is not cooling, surgeon is saying he cannot operate like this",
+      "expected_code": "OTHER",
+      "expected_dept": "Unattributed",
+      "expected_min": null,
+      "alternate_code": "EQUIPMENT_FAILURE"
+    },
+    {
+      "id": "e15",
+      "utterance": "set toh aa gaya but it is the wrong tray, general set bheja hai instead of ortho",
+      "expected_code": "STERILE_SET_UNAVAILABLE",
+      "expected_dept": "CSSD",
+      "expected_min": null
+    },
+    {
+      "id": "e16",
+      "utterance": "anaesthetist bola patient ka BP high hai, wo thoda settle hone ke baad hi start karenge, maybe thirty minutes",
+      "expected_code": "ANAESTHESIA_DELAY",
+      "expected_dept": "Anaesthesia",
+      "expected_min": 30
+    },
+    {
+      "id": "e17",
+      "utterance": "porter has taken the patient to X-ray instead, they are bringing him back now",
+      "expected_code": "PORTER_TRANSPORT",
+      "expected_dept": "Portering",
+      "expected_min": null
+    },
+    {
+      "id": "e18",
+      "utterance": "consultant is in OPD, PG is scrubbed but he is saying he will not start without sir",
+      "expected_code": "SURGEON_LATE",
+      "expected_dept": "Surgery",
+      "expected_min": null
+    },
+    {
+      "id": "e19",
+      "utterance": "cautery plate is missing, biomed is saying fifteen minutes to get another one",
+      "expected_code": "EQUIPMENT_FAILURE",
+      "expected_dept": "Biomedical",
+      "expected_min": 15
+    },
+    {
+      "id": "e20",
+      "utterance": "the previous patient is not shifting out, recovery is full, so table is not free",
+      "expected_code": "PREVIOUS_CASE_OVERRUN",
+      "expected_dept": "Theatre",
+      "expected_min": null,
+      "alternate_code": "ICU_BED_UNAVAILABLE"
+    },
+    {
+      "id": "e21",
+      "utterance": "patient is not fasting properly, he drank water at six, we have to push by two hours",
+      "expected_code": "PATIENT_NOT_READY",
+      "expected_dept": "Ward",
+      "expected_min": 120
+    },
+    {
+      "id": "e22",
+      "utterance": "ward is saying the file is not complete, anaesthesia fitness page is not signed",
+      "expected_code": "CONSENT_INCOMPLETE",
+      "expected_dept": "Ward",
+      "expected_min": null,
+      "alternate_code": "PATIENT_NOT_READY"
+    },
+    {
+      "id": "e23",
+      "utterance": "blood bank called, one unit is short, they are arranging from the other branch, one hour",
+      "expected_code": "BLOOD_PRODUCTS",
+      "expected_dept": "Blood Bank",
+      "expected_min": 60
+    },
+    {
+      "id": "e24",
+      "utterance": "no ICU bed for the post op, they are saying shift to HDU, ICU in-charge is not picking up",
+      "expected_code": "ICU_BED_UNAVAILABLE",
+      "expected_dept": "ICU",
+      "expected_min": null
+    },
+    {
+      "id": "e25",
+      "utterance": "autoclave load is still running, forty five minutes they said, nothing sterile is ready",
+      "expected_code": "STERILE_SET_UNAVAILABLE",
+      "expected_dept": "CSSD",
+      "expected_min": 45
+    },
+    {
+      "id": "e26",
+      "utterance": "sir is operating in the private OT, he said give me twenty minutes",
+      "expected_code": "SURGEON_LATE",
+      "expected_dept": "Surgery",
+      "expected_min": 20
+    },
+    {
+      "id": "e27",
+      "utterance": "ventilator is showing some error, they are swapping the machine, ten minutes",
+      "expected_code": "EQUIPMENT_FAILURE",
+      "expected_dept": "Biomedical",
+      "expected_min": 10
+    },
+    {
+      "id": "e28",
+      "utterance": "trolley ka wheel jam ho gaya hai, doosra trolley dhoond rahe hain, patient wait kar raha hai",
+      "expected_code": "PORTER_TRANSPORT",
+      "expected_dept": "Portering",
+      "expected_min": null
+    },
+    {
+      "id": "e29",
+      "utterance": "induction is taking long, they are trying for the line since fifteen minutes",
+      "expected_code": "ANAESTHESIA_DELAY",
+      "expected_dept": "Anaesthesia",
+      "expected_min": 15
+    },
+    {
+      "id": "e30",
+      "utterance": "case before this one had bleeding, they called for more units, still inside",
+      "expected_code": "PREVIOUS_CASE_OVERRUN",
+      "expected_dept": "Theatre",
+      "expected_min": null,
+      "alternate_code": "BLOOD_PRODUCTS"
+    }
+  ]
+}

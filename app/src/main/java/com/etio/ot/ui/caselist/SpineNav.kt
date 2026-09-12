@@ -4,6 +4,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 import com.etio.ot.ui.Routes
+import com.etio.ot.ui.debug.EvalScreen
 import com.etio.ot.ui.settings.SettingsScreen
 
 /**
@@ -21,6 +22,13 @@ fun NavGraphBuilder.spineGraph(nav: NavHostController) {
     }
 
     composable(Routes.SETTINGS) {
-        SettingsScreen(onBack = { nav.popBackStack() })
+        SettingsScreen(
+            onBack = { nav.popBackStack() },
+            onOpenEval = { nav.navigate(Routes.EVAL) },
+        )
+    }
+
+    composable(Routes.EVAL) {
+        EvalScreen(onBack = { nav.popBackStack() })
     }
 }

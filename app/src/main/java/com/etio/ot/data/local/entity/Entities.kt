@@ -90,6 +90,14 @@ data class DelayRecordEntity(
     val noteGrounded: Boolean = true,
     val estimatedMinGrounded: Boolean = true,
     val deptGrounded: Boolean = true,
+    /**
+     * Share of self-consistency samples that agreed on [code]. Measured behaviour, not
+     * self-report — kept ALONGSIDE [modelConfidence] rather than replacing it, because
+     * the gap between the two is itself worth looking at.
+     *
+     * Null when the record was classified with a single sample.
+     */
+    val agreementRatio: Float? = null,
 )
 
 @Entity(

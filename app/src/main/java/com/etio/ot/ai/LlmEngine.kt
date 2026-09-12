@@ -88,6 +88,15 @@ interface LlmEngine {
 
     fun close()
 
+    /**
+     * Debug only: ignore any primed session and send the whole prompt every call.
+     *
+     * Exists so the A/B column in the eval harness is a real measurement rather than
+     * an assertion — the two paths can be run back to back on the same device, in the
+     * same minute, against the same thirty utterances. No-op by default.
+     */
+    fun setForceFullPrefill(force: Boolean) = Unit
+
     sealed interface EngineState {
         data object NotLoaded : EngineState
         data class Loading(val message: String) : EngineState
