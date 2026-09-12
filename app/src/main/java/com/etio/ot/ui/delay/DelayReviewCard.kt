@@ -2,6 +2,9 @@ package com.etio.ot.ui.delay
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.etio.ot.ui.common.RevealAfter
+import com.etio.ot.ui.theme.InferenceSignal
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -80,6 +83,13 @@ fun DelayReviewCard(
     // nothing. A confident record opens closed, as before.
     var editing by remember(record.id) { mutableStateOf(if (needsAttention) Field.CODE else null) }
     var showRawConfidence by remember(record.id) { mutableStateOf(false) }
+
+    // Fields land one after another over ~400ms rather than all at once. The
+    // inference that produced them took seconds; arriving in sequence reads as that
+    // work finishing, where a single instant swap reads as a freeze and then a jump.
+    // Off while a model job is running, so the reveal never competes for the GPU.
+    val inferenceActive by InferenceSignal.active.collectAsStateWithLifecycle(initialValue = false)
+    val stagger = !inferenceActive
     var transcriptDraft by remember(record.id) { mutableStateOf(record.transcriptRaw) }
     var noteDraft by remember(record.id) { mutableStateOf(record.note) }
     var estimateDraft by remember(record.id) { mutableStateOf(record.estimatedMin?.toString().orEmpty()) }
@@ -106,12 +116,14 @@ fun DelayReviewCard(
         // The band marks the three fields the model judged. The expected delay is
         // gated by the transcript check rather than by the model's own certainty, and
         // the note is her words quoted back, so neither carries it.
-        Field(
-            label = "Cause",
-            value = record.code.display,
-            band = band,
-            onEdit = { editing = if (editing == Field.CODE) null else Field.CODE },
-        )
+        RevealAfter(0, stagger) {
+            Field(
+                label = "Cause",
+                value = record.code.display,
+                band = band,
+                onEdit = { editing = if (editing == Field.CODE) null else Field.CODE },
+            )
+        }
         if (editing == Field.CODE) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Etio.space.s)) {
                 DelayCode.entries.forEach { code ->
@@ -124,12 +136,14 @@ fun DelayReviewCard(
             }
         }
 
-        Field(
-            label = "Department",
-            value = record.attributedDept.ifBlank { "—" },
-            band = band,
-            onEdit = { editing = if (editing == Field.DEPT) null else Field.DEPT },
-        )
+        RevealAfter(100, stagger) {
+            Field(
+                label = "Department",
+                value = record.attributedDept.ifBlank { "—" },
+                band = band,
+                onEdit = { editing = if (editing == Field.DEPT) null else Field.DEPT },
+            )
+        }
         if (editing == Field.DEPT) {
             Row(
                 Modifier.horizontalScroll(rememberScrollState()),
@@ -145,16 +159,18 @@ fun DelayReviewCard(
             }
         }
 
-        Field(
-            label = "Avoidable",
-            value = when (record.avoidable) {
-                Avoidability.AVOIDABLE -> "Yes"
-                Avoidability.UNAVOIDABLE -> "No"
-                Avoidability.UNCLEAR -> "Unclear"
-            },
-            band = band,
-            onEdit = { editing = if (editing == Field.AVOIDABLE) null else Field.AVOIDABLE },
-        )
+        RevealAfter(200, stagger) {
+            Field(
+                label = "Avoidable",
+                value = when (record.avoidable) {
+                    Avoidability.AVOIDABLE -> "Yes"
+                    Avoidability.UNAVOIDABLE -> "No"
+                    Avoidability.UNCLEAR -> "Unclear"
+                },
+                band = band,
+                onEdit = { editing = if (editing == Field.AVOIDABLE) null else Field.AVOIDABLE },
+            )
+        }
         if (editing == Field.AVOIDABLE) {
             Row(horizontalArrangement = Arrangement.spacedBy(Etio.space.s)) {
                 Avoidability.entries.forEach { value ->
@@ -176,11 +192,13 @@ fun DelayReviewCard(
             }
         }
 
-        Field(
-            label = "Expected delay",
-            value = record.estimatedMin?.let { "$it min" } ?: "Not stated",
-            onEdit = { editing = if (editing == Field.ETA) null else Field.ETA },
-        )
+        RevealAfter(300, stagger) {
+            Field(
+                label = "Expected delay",
+                value = record.estimatedMin?.let { "$it min" } ?: "Not stated",
+                onEdit = { editing = if (editing == Field.ETA) null else Field.ETA },
+            )
+        }
         if (editing == Field.ETA) {
             OutlinedTextField(
                 value = estimateDraft,

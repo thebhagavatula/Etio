@@ -1,6 +1,11 @@
 package com.etio.ot.ui.caselist
 
 import androidx.compose.foundation.clickable
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.etio.ot.ui.theme.InferenceSignal
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,6 +58,7 @@ fun NextEventBar(
     onDismissSendFor: () -> Unit = {},
 ) {
     val haptics = rememberEtioHaptics()
+    val inferenceActive by InferenceSignal.active.collectAsStateWithLifecycle(initialValue = false)
 
     Surface(color = Color.Transparent, modifier = modifier.fillMaxWidth().glass(RoundedCornerShape(0.dp))) {
         Column(Modifier.padding(horizontal = Etio.space.gutter, vertical = Etio.space.m)) {
@@ -104,7 +110,19 @@ fun NextEventBar(
                             .height(PRIMARY_HEIGHT)
                             .spotlight(SpotlightTarget.NEXT_EVENT),
                     ) {
-                        Text(nextEvent.label, style = MaterialTheme.typography.titleMedium)
+                        // The label crossfades rather than swapping. Marking an event
+                        // is the app's one real state change, and an instant
+                        // substitution makes it look like nothing happened. Held
+                        // still while a model job runs — see EtioMotion.
+                        Crossfade(
+                            targetState = nextEvent,
+                            animationSpec = tween(
+                                if (inferenceActive) 0 else Etio.motion.STANDARD_MS,
+                            ),
+                            label = "nextEventLabel",
+                        ) { event ->
+                            Text(event.label, style = MaterialTheme.typography.titleMedium)
+                        }
                     }
                 } else {
                     Surface(

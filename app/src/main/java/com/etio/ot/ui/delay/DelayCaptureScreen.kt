@@ -56,6 +56,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.etio.ot.ai.LlmEngine
 import com.etio.ot.ui.tutorial.SpotlightTarget
 import com.etio.ot.ui.tutorial.spotlight
+import com.etio.ot.ui.common.BlockedState
 import com.etio.ot.ui.theme.Etio
 import com.etio.ot.ui.theme.EtioMonoStyle
 import com.etio.ot.ui.theme.glass
@@ -136,7 +137,9 @@ fun DelayCaptureScreen(
             if (engineState is LlmEngine.EngineState.Failed) {
                 Spacer(Modifier.height(Etio.space.m))
                 Notice(
-                    message = "Model unavailable — capture still works, classification will be Other",
+                    headline = "Model not loaded",
+                    message = "Capture still works — what you say is kept verbatim, and the cause " +
+                        "comes back as Other for you to set.",
                     actionLabel = "Try loading again",
                     onAction = viewModel::retryModel,
                 )
@@ -148,14 +151,15 @@ fun DelayCaptureScreen(
                 CapturePhase.IDLE, CapturePhase.LISTENING -> {
                     if (!mic.granted) {
                         Notice(
-                            message = "Microphone access is off, so Etio can't hear the room. " +
-                                "You can still type what happened.",
+                            headline = "Microphone is off",
+                            message = "Etio can't hear the room, so type what happened instead.",
                             actionLabel = if (mic.asked) "Open settings" else "Allow microphone",
                             onAction = mic.request,
                         )
                     } else if (!state.micAvailable) {
                         Notice(
-                            message = "No offline speech recogniser on this phone. Install one in " +
+                            headline = "No offline recogniser",
+                            message = "This phone has no offline speech pack. Add English (India) in " +
                                 "Settings, or type what happened.",
                             actionLabel = "Check again",
                             onAction = viewModel::recheckMic,
@@ -350,18 +354,17 @@ private fun TranscriptBlock(transcript: String) {
 
 /** A blocked path, said plainly, with the one thing that unblocks it. */
 @Composable
-private fun Notice(message: String, actionLabel: String, onAction: () -> Unit) {
-    Surface(
-        color = Etio.colors.delay.copy(alpha = 0.16f),
-        shape = RoundedCornerShape(Etio.radius.card),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(Modifier.padding(Etio.space.l)) {
-            Text(message, style = MaterialTheme.typography.bodyLarge, color = Etio.colors.delay)
-            Spacer(Modifier.height(Etio.space.s))
-            TextButton(onClick = onAction) { Text(actionLabel) }
-        }
-    }
+private fun Notice(message: String, actionLabel: String, onAction: () -> Unit, headline: String = "") {
+    // Amber, not red. None of the three things that land here stop the day being
+    // logged — a missing model, a refused microphone and an absent recogniser each
+    // remove one convenience and leave typing intact. Red would say the app is
+    // broken, which would be the screen's only dishonest sentence.
+    BlockedState(
+        headline = headline.ifBlank { "Still usable" },
+        line = message,
+        actionLabel = actionLabel,
+        onAction = onAction,
+    )
 }
 
 /** What the screen needs to know about RECORD_AUDIO, and how to ask for it. */

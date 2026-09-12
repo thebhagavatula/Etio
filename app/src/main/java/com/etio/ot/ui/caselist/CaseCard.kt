@@ -5,6 +5,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -66,12 +69,15 @@ fun ActiveCaseCard(
     val timeFmt = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
     var showBreakdown by remember(case.id) { mutableStateOf(false) }
 
+    // The one card on the screen that is allowed to be big: a step further off the
+    // background than any other surface, a larger radius, and more air inside it. The
+    // eye needs somewhere to land, and everything else on this screen is a row.
     Surface(
-        color = Etio.colors.surface,
-        shape = RoundedCornerShape(Etio.radius.card),
+        color = Etio.colors.surfaceHero,
+        shape = RoundedCornerShape(Etio.radius.hero),
         modifier = modifier,
     ) {
-        Column(Modifier.padding(Etio.space.card)) {
+        Column(Modifier.padding(Etio.space.heroCard)) {
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -93,7 +99,7 @@ fun ActiveCaseCard(
                 }
             }
 
-            Spacer(Modifier.height(Etio.space.s))
+            Spacer(Modifier.height(Etio.space.within))
             Text(case.procedureName, style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(Etio.space.xs))
             Text(
@@ -105,18 +111,14 @@ fun ActiveCaseCard(
 
             // One live number, large, and it ticks rather than animating.
             metrics?.let { m ->
-                Spacer(Modifier.height(Etio.space.gutter))
+                Spacer(Modifier.height(Etio.space.section))
                 val open = openSpan(m)
-                Text(
-                    open?.second?.formatMmSs() ?: "—",
-                    style = MaterialTheme.typography.displaySmall,
-                    color = if (open != null) Etio.colors.running else Etio.colors.textSecondary,
+                LiveTimer(
+                    elapsedMs = open?.second,
+                    label = open?.first ?: "Not started",
+                    thresholdMin = open?.let { thresholdForSpan(it.first, case.scheduledDurationMin) } ?: 0,
                 )
-                Text(
-                    (open?.first ?: "Not started").uppercase(),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = Etio.colors.textSecondary,
-                )
+                Spacer(Modifier.height(Etio.space.within))
 
                 TextButton(
                     onClick = { showBreakdown = !showBreakdown },
@@ -175,16 +177,38 @@ fun ActiveCaseCard(
     }
 
     // F9 — the pattern, visible live, as pills under the card rather than inside it.
+    //
+    // Flush with the card's left padding and allowed to run off the right under a
+    // fade. Content that continues past the viewport reads as a real app with more
+    // in it; the same pills politely centred read as a mock-up of one.
     if (delays.isNotEmpty()) {
-        Spacer(Modifier.height(Etio.space.s))
-        Row(
-            Modifier.horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(Etio.space.s),
-        ) {
-            delays.forEach { d -> DelayPill(d, onClick = { onOpenDelay(d.id) }) }
+        Spacer(Modifier.height(Etio.space.within))
+        Box {
+            Row(
+                Modifier
+                    .horizontalScroll(rememberScrollState())
+                    .padding(end = PILL_FADE_WIDTH),
+                horizontalArrangement = Arrangement.spacedBy(Etio.space.s),
+            ) {
+                delays.forEach { d -> DelayPill(d, onClick = { onOpenDelay(d.id) }) }
+            }
+            Spacer(
+                Modifier
+                    .align(Alignment.CenterEnd)
+                    .matchParentSize()
+                    .background(
+                        Brush.horizontalGradient(
+                            0.75f to Color.Transparent,
+                            1f to Etio.colors.background,
+                        ),
+                    ),
+            )
         }
     }
 }
+
+/** How much of the right edge the pills disappear under. */
+private val PILL_FADE_WIDTH = 32.dp
 
 /** One line, 56dp, for a case that is not the one she is standing in. */
 @Composable

@@ -4,6 +4,9 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -42,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.etio.ot.data.model.Audience
+import com.etio.ot.ui.common.EmptyState
 import com.etio.ot.ui.theme.Etio
 import com.etio.ot.ui.theme.glass
 
@@ -104,6 +108,15 @@ fun MessagesScreen(
                 .padding(horizontal = Etio.space.m),
             verticalArrangement = Arrangement.spacedBy(Etio.space.s),
         ) {
+            if (state.record == null && !state.generating) {
+                EmptyState(
+                    line = "That delay record is no longer here.",
+                    actionLabel = "Back to the day",
+                    onAction = onBack,
+                )
+                return@Column
+            }
+
             // Row one is the comparison. Row two is the rest of the fan-out.
             MessageRow(
                 left = Audience.SURGEON,
@@ -169,10 +182,19 @@ private fun MessageCard(
     val message = state.messages[audience]
     val isPending = audience in state.pending
 
+    // Each card fades up as its own generation completes, rather than four empty
+    // placeholders appearing at once and filling in later. Four blanks on screen is
+    // the app admitting it has nothing yet; one card arriving is it delivering.
+    val alpha by animateFloatAsState(
+        targetValue = if (message != null || isPending) 1f else 0.5f,
+        animationSpec = tween(Etio.motion.STANDARD_MS),
+        label = "messageCardAlpha",
+    )
+
     Surface(
         color = Etio.colors.surface,
         shape = RoundedCornerShape(Etio.radius.card),
-        modifier = modifier,
+        modifier = modifier.alpha(alpha),
     ) {
         Column(Modifier.padding(Etio.space.l)) {
             Row(verticalAlignment = Alignment.CenterVertically) {

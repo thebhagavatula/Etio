@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.sp
 data class EtioColors(
     val background: Color,
     val surface: Color,
+    /** The active case only. One step further from the background than [surface]. */
+    val surfaceHero: Color,
     /** Chrome only. See [glass] for where this is allowed. */
     val surfaceGlass: Color,
     val border: Color,
@@ -49,6 +51,7 @@ data class EtioColors(
 val DarkEtioColors = EtioColors(
     background = Color(0xFF0B0F14),
     surface = Color(0xFF141A21),
+    surfaceHero = Color(0xFF1B242F),
     surfaceGlass = Color(0xFF1C242E),
     border = Color(0xFFFFFFFF).copy(alpha = 0.08f),
     textPrimary = Color(0xFFF2F5F8),
@@ -69,6 +72,9 @@ val DarkEtioColors = EtioColors(
 val LightEtioColors = EtioColors(
     background = Color(0xFFF7F9FB),
     surface = Color(0xFFFFFFFF),
+    // Already the lightest ground available, so on light the hero earns its weight
+    // through size, padding and radius rather than through another step of value.
+    surfaceHero = Color(0xFFFFFFFF),
     surfaceGlass = Color(0xFFFFFFFF),
     border = Color(0xFF0B0F14).copy(alpha = 0.10f),
     textPrimary = Color(0xFF0B0F14),
@@ -92,7 +98,13 @@ const val GLASS_ALPHA_FLAT = 0.92f
 
 // --- spacing and shape -------------------------------------------------------
 
-/** 4dp base. Everything on the screen is a multiple of it. */
+/**
+ * 4dp base. Everything on the screen is a multiple of it.
+ *
+ * [within] and [section] exist to stop the layout reading as generated. A single
+ * spacing value used everywhere gives every gap the same meaning, so nothing groups
+ * and the eye has no structure to follow: 12dp inside a group, 32dp between groups.
+ */
 object EtioSpace {
     val xs = 4.dp
     val s = 8.dp
@@ -102,12 +114,27 @@ object EtioSpace {
     val card = 20.dp
     val xl = 24.dp
     val xxl = 32.dp
+
+    /** Between items that belong together. */
+    val within = 12.dp
+
+    /** Between one group and the next. */
+    val section = 32.dp
+
+    /** Internal padding of the active case card — more than any other surface gets. */
+    val heroCard = 24.dp
 }
 
 object EtioRadius {
     val card = 20.dp
     val sheet = 28.dp
     val pill = 16.dp
+
+    /** The active case. Larger than everything else, on purpose. */
+    val hero = 24.dp
+
+    /** Secondary rows, when they need a shape at all. */
+    val row = 16.dp
 }
 
 /** Standard 180ms, sheets 240ms, both FastOutSlowIn. Timers never use either. */

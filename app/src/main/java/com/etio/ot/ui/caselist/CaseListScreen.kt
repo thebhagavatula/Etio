@@ -1,6 +1,13 @@
 package com.etio.ot.ui.caselist
 
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.lazy.itemsIndexed
+import com.etio.ot.ui.common.EmptyState
+import com.etio.ot.ui.common.HairlineSeparator
+import com.etio.ot.ui.common.SectionLabel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -58,6 +65,9 @@ import com.etio.ot.ui.theme.backdropBlur
 import com.etio.ot.ui.theme.glass
 import com.etio.ot.ui.theme.rememberEtioHaptics
 
+/** How far the day-standing chip hangs over the active card's top edge. */
+private val VARIANCE_CHIP_OVERLAP = 8.dp
+
 /** Whole minutes, plain words — it changes at most once a minute, so it sits still. */
 private fun Int.asDayStanding(): String = when {
     this > 0 -> "$this min behind"
@@ -67,7 +77,7 @@ private fun Int.asDayStanding(): String = when {
 
 /** The day's standing, coloured by how far off it is. Chrome, so glass is fine behind it. */
 @Composable
-private fun VarianceChip(varianceMin: Int) {
+private fun VarianceChip(varianceMin: Int, modifier: Modifier = Modifier) {
     val tint = when {
         varianceMin <= 5 -> Etio.colors.running
         varianceMin <= 20 -> Etio.colors.warning
@@ -76,6 +86,7 @@ private fun VarianceChip(varianceMin: Int) {
     Surface(
         color = tint.copy(alpha = 0.16f),
         shape = RoundedCornerShape(Etio.radius.pill),
+        modifier = modifier,
     ) {
         Text(
             varianceMin.asDayStanding(),
@@ -195,7 +206,6 @@ fun CaseListScreen(
                                 color = Etio.colors.textSecondary,
                             )
                         }
-                        VarianceChip(state.metrics.runningVarianceMin)
                     }
                 },
                 actions = {
@@ -222,7 +232,9 @@ fun CaseListScreen(
                 top = Etio.space.m,
                 bottom = Etio.space.xxl,
             ),
-            verticalArrangement = Arrangement.spacedBy(Etio.space.m),
+            // 12dp is the within-a-group gap. Anything that starts a new group adds
+            // its own 32dp, rather than every gap on the screen meaning the same thing.
+            verticalArrangement = Arrangement.spacedBy(Etio.space.within),
         ) {
             state.shift?.summary?.let { summary ->
                 item {
@@ -243,23 +255,43 @@ fun CaseListScreen(
 
             focusCase?.let { case ->
                 item(key = case.id) {
-                    ActiveCaseCard(
+                    // The one deliberate off-grid element on this screen: the day's
+                    // standing sits across the top edge of the active card rather than
+                    // in a row of its own. One thing breaking the grid reads as
+                    // designed; three read as a mistake.
+                    Box(modifier = Modifier.padding(top = VARIANCE_CHIP_OVERLAP)) {
+                        ActiveCaseCard(
                         case = case,
                         metrics = state.metrics.forCase(case.id),
                         events = state.eventsByCase[case.id].orEmpty(),
                         delays = state.delaysByCase[case.id].orEmpty(),
                         onOpenDelay = onOpenMessages,
                         modifier = Modifier.fillMaxWidth(),
-                        onSetEventTime = { editingEvent = it },
-                        dismissedAssumptions = dismissedAssumptions.toSet(),
-                        onDismissAssumption = { dismissedAssumptions.add(it) },
-                    )
+                            onSetEventTime = { editingEvent = it },
+                            dismissedAssumptions = dismissedAssumptions.toSet(),
+                            onDismissAssumption = { dismissedAssumptions.add(it) },
+                        )
+                        VarianceChip(
+                            state.metrics.runningVarianceMin,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .offset(x = -Etio.space.l, y = -VARIANCE_CHIP_OVERLAP),
+                        )
+                    }
                 }
             }
 
             if (showAllCases) {
-                items(otherCases, key = { it.id }) { case ->
-                    CaseRow(case = case, metrics = state.metrics.forCase(case.id))
+                item { Spacer(Modifier.height(Etio.space.section - Etio.space.within)) }
+                item { SectionLabel("The rest of the list") }
+                itemsIndexed(otherCases, key = { _, c -> c.id }) { index, case ->
+                    Column {
+                        // Borderless. A hairline is all the separation a secondary row
+                        // needs, and every card chrome removed here is weight the
+                        // active case gets to keep.
+                        if (index > 0) HairlineSeparator()
+                        CaseRow(case = case, metrics = state.metrics.forCase(case.id))
+                    }
                 }
             }
             if (otherCases.isNotEmpty()) {
@@ -276,12 +308,21 @@ fun CaseListScreen(
                 }
             }
 
-            item {
-                Row(modifier = Modifier.padding(top = 8.dp)) {
+            if (state.cases.isEmpty()) {
+                item {
+                    EmptyState(
+                        line = "No cases on the list yet.",
+                        actionLabel = "Load today's theatre day",
+                        onAction = viewModel::resetDay,
+                    )
+                }
+            } else {
+                item { Spacer(Modifier.height(Etio.space.section - Etio.space.within)) }
+                item {
                     Text(
                         "The button at the bottom marks the clock. Tap the mic only when something has gone wrong.",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = Etio.colors.textSecondary,
                     )
                 }
             }
