@@ -42,6 +42,8 @@ android {
 
     buildFeatures {
         compose = true
+        // The settings screen prints the version, and the eval harness hides behind it.
+        buildConfig = true
     }
 
     packaging {
