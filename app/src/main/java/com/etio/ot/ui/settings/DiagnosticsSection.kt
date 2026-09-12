@@ -51,9 +51,13 @@ fun DiagnosticsSection(
             Stat("Session prime", t.primeMs?.let { "$it ms" } ?: "—")
 
             t.prefixTokens.forEach { (profile, tokens) ->
-                // Cached once at start-up. This many tokens is what each call no
-                // longer re-decodes.
-                Stat("  $profile prefix", if (tokens >= 0) "$tokens tok, cached" else "cached")
+                // Says which it actually is. Claiming a cache hit on a backend that
+                // cannot clone would make the latency figures below unexplainable.
+                val size = if (tokens >= 0) "$tokens tok" else "size unknown"
+                Stat("  $profile prefix", if (t.prefixCached) "$size, cached" else "$size, re-sent each call")
+            }
+            if (!t.prefixCached) {
+                Stat("Prefix caching", "unavailable — backend cannot clone sessions")
             }
 
             Spacer(Modifier.height(Etio.space.s))

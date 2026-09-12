@@ -38,6 +38,8 @@ object InferenceTelemetry {
         /** Priming one session per profile, after the engine itself is up. */
         val primeMs: Long? = null,
         val prefixTokens: Map<String, Int> = emptyMap(),
+        /** False when the backend cannot clone, so prefixes are re-sent every call. */
+        val prefixCached: Boolean = true,
         val calls: List<Call> = emptyList(),
         val recordsConfirmed: Int = 0,
         val recordsEdited: Int = 0,
@@ -72,9 +74,10 @@ object InferenceTelemetry {
         it.copy(backend = backend, engineLoadMs = loadMs)
     }
 
-    fun primed(primeMs: Long, prefixTokens: Map<String, Int>) = _snapshot.update {
-        it.copy(primeMs = primeMs, prefixTokens = prefixTokens)
-    }
+    fun primed(primeMs: Long, prefixTokens: Map<String, Int>, prefixCached: Boolean = true) =
+        _snapshot.update {
+            it.copy(primeMs = primeMs, prefixTokens = prefixTokens, prefixCached = prefixCached)
+        }
 
     fun call(call: Call) = _snapshot.update {
         it.copy(calls = (it.calls + call).takeLast(MAX_CALLS))

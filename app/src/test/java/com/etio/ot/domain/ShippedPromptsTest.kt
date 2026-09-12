@@ -139,4 +139,50 @@ class ShippedPromptsTest {
         assertTrue(drafting["temperature"]!!.jsonPrimitive.content.toFloat() >= 0.5f)
         assertEquals(200, drafting["max_tokens"]!!.jsonPrimitive.content.toInt())
     }
+
+    @Test
+    fun `the classification prompt still fits the token budget`() {
+        // This is the test that would have caught the crash.
+        //
+        // Going over the model's token budget does not raise a Kotlin exception:
+        // MediaPipe leaves one pending and the JNI layer aborts the process, so the
+        // app disappears with no stack trace in Logcat that points here. Growing
+        // few-shot from four examples to seven is exactly how it happened.
+        //
+        // The budget is 2048 and cannot simply be raised — above that the GPU
+        // refuses to load at all ("maximum cache size supported: 2048") and the whole
+        // app silently drops to the CPU backend, where a decode takes three times as
+        // long. So the prompt is what has to give.
+        //
+        // Measured on device: this prefix is 4476 chars and 957 tokens, about 4.7
+        // chars per token. The 3.5 used here is deliberately pessimistic, so the test
+        // trips well before the process would.
+        val prefix = buildString {
+            appendLine(prompts["system_prefix"]!!.jsonPrimitive.content)
+            val tax = taxonomy
+            tax["department_hints"]!!.jsonArray.forEach { appendLine(it.jsonPrimitive.content) }
+            tax["codes"]!!.jsonArray.forEach {
+                appendLine(it.jsonObject["code"]!!.jsonPrimitive.content)
+                appendLine(it.jsonObject["description"]!!.jsonPrimitive.content)
+            }
+            fewShot.forEach {
+                appendLine(it["transcript"]!!.jsonPrimitive.content)
+                appendLine(it["json"]!!.jsonPrimitive.content)
+            }
+            appendLine(prompts["classification"]!!.jsonObject["instruction"]!!.jsonPrimitive.content)
+        }
+
+        val pessimisticTokens = prefix.length / 3.5
+        assertTrue(
+            "The classification prefix is ${prefix.length} chars (~${pessimisticTokens.toInt()} tokens " +
+                "at a pessimistic 3.5 chars/token) against a $PREFIX_CEILING_TOKENS ceiling. " +
+                "Overflowing aborts the process rather than throwing. Remove a few-shot example.",
+            pessimisticTokens < PREFIX_CEILING_TOKENS,
+        )
+    }
+
+    private companion object {
+        /** MediaPipeLlmEngine: 2048 budget, less room for the utterance and the reply. */
+        const val PREFIX_CEILING_TOKENS = 2048 - 256 - 256
+    }
 }
