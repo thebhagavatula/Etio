@@ -47,4 +47,36 @@ class SplashTimingTest {
     fun `the wordmark gap is half the logo height`() {
         assertEquals(SplashTiming.LOGO_SIZE / 2, SplashTiming.LOGO_TO_WORDMARK_GAP)
     }
+
+    @Test
+    fun `the tagline gets its own beat instead of fading through the wordmark`() {
+        val wordmarkEnds = SplashTiming.WORDMARK_DELAY_MS + SplashTiming.WORDMARK_FADE_MS
+        // It used to start at 400ms while the wordmark ran to 500ms. Two things fading
+        // through each other read as one thing appearing, so the fade was present and
+        // simply invisible. Starting after the wordmark settles is the whole fix.
+        assertTrue(
+            "tagline starts at ${SplashTiming.TAGLINE_DELAY_MS}ms, before the wordmark " +
+                "finishes at ${wordmarkEnds}ms — they will read as one element",
+            SplashTiming.TAGLINE_DELAY_MS >= wordmarkEnds,
+        )
+    }
+
+    @Test
+    fun `the tagline fade is slow enough to notice`() {
+        // A short fade on a small line of secondary text is indistinguishable from a
+        // cut. This is the number that makes it perceptible.
+        assertTrue(
+            "tagline fade is only ${SplashTiming.TAGLINE_FADE_MS}ms",
+            SplashTiming.TAGLINE_FADE_MS >= 400,
+        )
+    }
+
+    @Test
+    fun `the intro accounts for the tagline, so warm-up never starts under it`() {
+        // INTRO_MS gates when model loading begins. If it ended before the tagline
+        // did, inference would start while something was still animating over it.
+        assertTrue(
+            SplashTiming.INTRO_MS >= SplashTiming.TAGLINE_DELAY_MS + SplashTiming.TAGLINE_FADE_MS,
+        )
+    }
 }

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
@@ -56,11 +57,22 @@ object SplashTiming {
     /** The wordmark starts this long after the logo starts, not after it finishes. */
     const val WORDMARK_DELAY_MS = 200L
     const val WORDMARK_FADE_MS = 300
-    const val TAGLINE_DELAY_MS = 400L
+
+    /**
+     * The tagline is a third beat, not a second half of the wordmark.
+     *
+     * It used to start at 400ms — before the wordmark had finished at 500ms — over the
+     * same 300ms. Two things fading through each other read as one thing appearing, so
+     * the fade was there and simply could not be seen. Starting after the wordmark
+     * settles, and taking longer over it, is what makes it land as its own moment.
+     */
+    const val TAGLINE_DELAY_MS = 550L
+    const val TAGLINE_FADE_MS = 450
+
     const val FADE_OUT_MS = 300
 
     /** Everything before the hold. Warm-up is deliberately not started until after it. */
-    const val INTRO_MS = TAGLINE_DELAY_MS + WORDMARK_FADE_MS
+    const val INTRO_MS = TAGLINE_DELAY_MS + TAGLINE_FADE_MS
 
     /**
      * How long to hold for a warm-up that has not finished. Past this the app opens
@@ -68,6 +80,9 @@ object SplashTiming {
      * and a splash that never ends is not.
      */
     const val WARM_UP_CEILING_MS = 20_000L
+
+    /** How far the tagline travels while it fades up. Small on purpose. */
+    val TAGLINE_RISE = 8.dp
 
     val LOGO_SIZE = 112.dp
 
@@ -123,7 +138,7 @@ fun SplashScreen(
     }
     LaunchedEffect(Unit) {
         delay(SplashTiming.TAGLINE_DELAY_MS)
-        taglineAlpha.animateTo(1f, tween(SplashTiming.WORDMARK_FADE_MS, easing = FastOutSlowInEasing))
+        taglineAlpha.animateTo(1f, tween(SplashTiming.TAGLINE_FADE_MS, easing = FastOutSlowInEasing))
     }
 
     // Intro, then warm-up in the stillness, then out.
@@ -189,11 +204,17 @@ fun SplashScreen(
 
             Spacer(Modifier.height(Etio.space.s))
 
+            // Rises as it fades, the drift driven by the same value as the alpha so
+            // the two cannot drift apart. Pure opacity change is hard to notice on a
+            // small line of secondary text; a few dp of travel is what makes the eye
+            // register it as arriving rather than as having always been there.
             Text(
                 "On-device theatre log",
                 style = MaterialTheme.typography.labelLarge,
                 color = Etio.colors.textSecondary,
-                modifier = Modifier.alpha(taglineAlpha.value),
+                modifier = Modifier
+                    .offset(y = SplashTiming.TAGLINE_RISE * (1f - taglineAlpha.value))
+                    .alpha(taglineAlpha.value),
             )
         }
     }
