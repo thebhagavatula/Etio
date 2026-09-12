@@ -85,7 +85,7 @@ parallel without editing the same files. See **BRANCHES.md**.
 
 **2. The model's output is never trusted.** `DelayJsonValidator` extracts the first balanced `{...}` (small models add fences and preambles), coerces unknown codes to `OTHER`, and **drops `estimated_min` unless a duration actually appears in the transcript** — the single most common hallucination in this task. It never throws and never surfaces a parse error; a failure becomes an `OTHER` the coordinator is asked to correct.
 
-**3. The checklist is model-free.** `ChecklistStateMachine.gate()` is the sole authority on whether an event may be marked. Skipping is allowed but never silent — the reason is stored and appears in the report.
+**3. The checklist is model-free.** `ChecklistStateMachine.gate()` is the sole authority on whether an event may be marked. Skipping is allowed but never silent — the reason is stored and appears in the report. Nothing in the automation touches it: no bulk confirm, no pre-checked items, no inference. An inferred `PATIENT_IN_ROOM` makes Sign In due exactly as a tapped one would, and the next mark on that case is gated until it is completed or skipped with a reason.
 
 ### Events are append-only
 
@@ -93,9 +93,25 @@ parallel without editing the same files. See **BRANCHES.md**.
 
 ## Demo path
 
-`CaseListScreen` → tap the event grid (WHO dialog fires at `PATIENT_IN_ROOM` / `ANAESTHESIA_START` / `CLOSURE_COMPLETE`) → **hold the mic** → transcript appears → `DelayReviewCard` with the verbatim transcript under every model-assigned field → **Notify** → four messages, surgeon and family adjacent → **report icon** in the top bar.
+`CaseListScreen` → tap the **single next-event button** at the bottom (WHO dialog fires at `PATIENT_IN_ROOM` / `ANAESTHESIA_START` / `CLOSURE_COMPLETE`) → **tap the mic** → transcript appears → `DelayReviewCard` with the verbatim transcript under every model-assigned field → **Notify**, which reveals four already-drafted messages, surgeon and family adjacent → **report icon** in the top bar.
 
-The refresh icon in the top bar wipes and re-seeds the day. Use it between rehearsals.
+The default screen shows only the active case, the next-event button, and one status line. `All cases` expands the list; `Other event` opens the full grid for out-of-order marking; `Timer breakdown` expands the spans on a card.
+
+**Long-press the status line** in the top bar to wipe and re-seed the day. Deliberately hidden, and it asks for confirmation — a reset control you can brush on stage is a reset control that ends a demo.
+
+### What the app fills in for you
+
+`DayFlow` and `ScheduleProjector` are pure Kotlin beside `TimerEngine` — list order, marked events and arithmetic, never the model:
+
+| Behaviour | Rule |
+| --- | --- |
+| The primary button's label | The earliest unmarked event in the day, walking cases in list order |
+| Missing earlier events | Written as `EventSource.INFERRED`, spaced evenly between the last real mark and this one, surfaced as a dismissible "assumed at HH:MM — tap to set" chip |
+| "Send for case N+1?" | Offered once `ROOM_READY` is marked, gone once `PATIENT_SENT_FOR` exists |
+| Threshold breach | In room >30 min with no knife, turnover >25 min, or >15 min past a scheduled start — the notice carries the mic |
+| Revised start times | Every case from the delayed one onwards moves by the stated `estimated_min`, and only when one was actually spoken |
+
+Job 2 starts the moment a DelayRecord is confirmed, on an app-scoped coroutine, so Notify is a reveal rather than a fifteen-second wait.
 
 ## Tests
 
