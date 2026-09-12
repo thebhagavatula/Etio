@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.etio.ot.ai.LlmEngine
+import com.etio.ot.ai.MessageDraftCoordinator
 import com.etio.ot.ai.SpeechCapture
 import com.etio.ot.data.local.entity.DelayRecordEntity
 import com.etio.ot.data.model.Avoidability
@@ -33,6 +34,7 @@ class DelayCaptureViewModel(
     private val delays: DelayRepository = AiModule.delayRepository,
     private val cases: CaseRepository = CoreModule.caseRepository,
     private val engine: LlmEngine = AiModule.llmEngine,
+    private val drafts: MessageDraftCoordinator = AiModule.draftCoordinator,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(DelayCaptureUiState())
@@ -202,11 +204,18 @@ class DelayCaptureViewModel(
         super.onCleared()
     }
 
-    /** Persists and hands back the id so the caller can navigate to drafting. */
+    /**
+     * Persists, starts Job 2 immediately, and hands back the id.
+     *
+     * Drafting runs on the app-scoped coordinator rather than here, so the four
+     * messages are already being written while she is still deciding whether to
+     * notify — Notify reveals them instead of starting a wait.
+     */
     fun confirm(onSaved: (String) -> Unit) {
         val record = _state.value.record ?: return
         viewModelScope.launch {
             delays.save(record)
+            drafts.start(record)
             onSaved(record.id)
         }
     }

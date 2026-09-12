@@ -55,6 +55,7 @@ import com.etio.ot.ui.events.EventGrid
 @Composable
 fun CaseListScreen(
     onCaptureDelay: (String) -> Unit,
+    onRecordDelay: (String) -> Unit,
     onOpenMessages: (String) -> Unit,
     onOpenReport: () -> Unit,
     viewModel: CaseListViewModel = viewModel(factory = CaseListViewModel.Factory),
@@ -67,6 +68,7 @@ fun CaseListScreen(
     var editingEvent by remember { mutableStateOf<EventEntity?>(null) }
     val dismissedAssumptions = remember { mutableStateListOf<String>() }
     val dismissedSendFor = remember { mutableStateListOf<String>() }
+    val dismissedBreaches = remember { mutableStateListOf<String>() }
     val sheetState = rememberModalBottomSheetState()
 
     // Everything the bottom bar needs, derived from the same metrics the timers use.
@@ -77,21 +79,33 @@ fun CaseListScreen(
     val nextAction = DayFlow.nextAction(state.cases, state.metrics)
     val sendFor = DayFlow.sendForOffer(state.cases, state.metrics)
         ?.takeIf { it.caseId !in dismissedSendFor }
+    val breach = DayFlow.breach(state.cases, state.metrics)
+        ?.takeIf { it.key !in dismissedBreaches }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
-            NextEventBar(
-                caseNumber = nextAction?.caseNumber,
-                nextEvent = nextAction?.event,
-                onMark = { type -> nextAction?.let { viewModel.markEvent(it.caseId, type) } },
-                onOtherEvent = { showEventSheet = true },
-                sendForLabel = sendFor?.let { "Send for case ${it.caseNumber}?" },
-                onSendFor = {
-                    sendFor?.let { viewModel.markEvent(it.caseId, EventType.PATIENT_SENT_FOR) }
-                },
-                onDismissSendFor = { sendFor?.let { dismissedSendFor.add(it.caseId) } },
-            )
+            Column {
+                breach?.let {
+                    DelayBreachBanner(
+                        message = it.message,
+                        caseNumber = it.caseNumber,
+                        onRecord = { onRecordDelay(it.caseId) },
+                        onDismiss = { dismissedBreaches.add(it.key) },
+                    )
+                }
+                NextEventBar(
+                    caseNumber = nextAction?.caseNumber,
+                    nextEvent = nextAction?.event,
+                    onMark = { type -> nextAction?.let { viewModel.markEvent(it.caseId, type) } },
+                    onOtherEvent = { showEventSheet = true },
+                    sendForLabel = sendFor?.let { "Send for case ${it.caseNumber}?" },
+                    onSendFor = {
+                        sendFor?.let { viewModel.markEvent(it.caseId, EventType.PATIENT_SENT_FOR) }
+                    },
+                    onDismissSendFor = { sendFor?.let { dismissedSendFor.add(it.caseId) } },
+                )
+            }
         },
         topBar = {
             TopAppBar(

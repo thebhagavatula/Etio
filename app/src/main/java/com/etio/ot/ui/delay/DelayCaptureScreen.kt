@@ -67,6 +67,8 @@ fun DelayCaptureScreen(
     caseId: String,
     onBack: () -> Unit,
     onNotify: (String) -> Unit,
+    /** True only when arriving from the breach banner, whose tap was the start. */
+    autoStart: Boolean = false,
     viewModel: DelayCaptureViewModel = viewModel(factory = DelayCaptureViewModel.factory(caseId)),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -79,6 +81,16 @@ fun DelayCaptureScreen(
 
     // Nothing to hold the mic for — put the keyboard fallback up straight away.
     LaunchedEffect(micUsable) { if (!micUsable) showTyped = true }
+
+    // The breach banner's mic tap continues here rather than asking for a second one.
+    // Once per arrival, and only if the mic is actually usable.
+    var autoStarted by remember { mutableStateOf(false) }
+    LaunchedEffect(autoStart, micUsable) {
+        if (autoStart && micUsable && !autoStarted) {
+            autoStarted = true
+            viewModel.startListening()
+        }
+    }
 
     Scaffold(
         topBar = {

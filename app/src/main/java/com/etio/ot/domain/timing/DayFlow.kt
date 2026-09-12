@@ -18,6 +18,15 @@ object DayFlow {
         val event: EventType,
     )
 
+    /** A span that has run past the point where someone should say why. */
+    data class Breach(
+        val caseId: String,
+        val caseNumber: String,
+        val message: String,
+        /** Stable across ticks so dismissing one does not re-fire a second later. */
+        val key: String,
+    )
+
     /** Offer to send for the case after one whose room is ready. */
     data class SendFor(
         val caseId: String,
@@ -42,6 +51,59 @@ object DayFlow {
                 TimerEngine.nextExpectedEvent(marks)?.let { NextAction(case.id, case.caseNumber, it) }
             }
             .firstOrNull()
+
+    /**
+     * The first span in the day that has run long enough to be worth explaining.
+     *
+     * Arithmetic on spans the timers already computed — it asks a question, it never
+     * answers one, and it never writes anything.
+     */
+    fun breach(cases: List<CaseEntity>, metrics: DayMetrics): Breach? {
+        val ordered = cases.filter { it.status != CaseStatus.CANCELLED }.sortedBy { it.orderIndex }
+
+        return ordered.firstNotNullOfOrNull { case ->
+            val m = metrics.forCase(case.id) ?: return@firstNotNullOfOrNull null
+
+            val inRoomNoKnife = m.isMarked(EventType.PATIENT_IN_ROOM) &&
+                !m.isMarked(EventType.KNIFE_TO_SKIN) &&
+                (m.anaesthesiaControlledMs ?: 0L) > IN_ROOM_TO_KNIFE_BREACH_MIN * 60_000L
+
+            val slowTurnover = !m.isMarked(EventType.PATIENT_IN_ROOM) &&
+                (m.turnoverMs ?: 0L) > TURNOVER_BREACH_MIN * 60_000L
+
+            val notStarted = !m.hasStarted &&
+                metrics.computedAtMs - case.scheduledStartMs > NOT_STARTED_BREACH_MIN * 60_000L
+
+            when {
+                inRoomNoKnife -> Breach(
+                    caseId = case.id,
+                    caseNumber = case.caseNumber,
+                    message = "in room ${(m.anaesthesiaControlledMs ?: 0L).minutes()} min, no knife yet",
+                    key = "${case.id}:knife",
+                )
+                slowTurnover -> Breach(
+                    caseId = case.id,
+                    caseNumber = case.caseNumber,
+                    message = "turnover running ${(m.turnoverMs ?: 0L).minutes()} min",
+                    key = "${case.id}:turnover",
+                )
+                notStarted -> Breach(
+                    caseId = case.id,
+                    caseNumber = case.caseNumber,
+                    message = "${(metrics.computedAtMs - case.scheduledStartMs).minutes()} min past its scheduled start",
+                    key = "${case.id}:unstarted",
+                )
+                else -> null
+            }
+        }
+    }
+
+    private fun Long.minutes(): Int = (this / 60_000L).toInt()
+
+    /** Thresholds, in minutes. Deliberately blunt — they start a conversation, nothing more. */
+    const val IN_ROOM_TO_KNIFE_BREACH_MIN = 30
+    const val TURNOVER_BREACH_MIN = 25
+    const val NOT_STARTED_BREACH_MIN = 15
 
     /**
      * After ROOM_READY on a case, the next one can be sent for. Returns the offer once
