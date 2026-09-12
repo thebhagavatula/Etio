@@ -9,6 +9,7 @@ import com.etio.ot.ai.MessageDraftCoordinator
 import com.etio.ot.ai.MessageDrafter
 import com.etio.ot.ai.ModelLocator
 import com.etio.ot.ai.SpeechCapture
+import com.etio.ot.ai.WarmUpSpec
 import com.etio.ot.ai.asPromptSource
 import com.etio.ot.data.repository.DelayRepository
 import kotlinx.coroutines.CoroutineScope
@@ -44,6 +45,7 @@ object AiModule {
                 context = ServiceLocator.appContext,
                 modelPath = resolveModelPath(),
                 preferGpu = PREFER_GPU,
+                warmUpSpecs = ::warmUpSpecs,
             )
         }
     }
@@ -77,6 +79,28 @@ object AiModule {
         MessageDraftCoordinator(
             delays = delayRepository,
             scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+        )
+    }
+
+    /**
+     * One session per job, primed at start-up with that job's real prefix.
+     *
+     * The classify profile also burns a throwaway utterance, so the first decode the
+     * coordinator actually waits on is not the one paying for cold kernels. Drafting
+     * is primed but not burned: Job 2 already runs off the critical path, and a second
+     * warm-up decode is start-up time spent for no visible gain.
+     */
+    private fun warmUpSpecs(): List<WarmUpSpec> {
+        return listOf(
+            WarmUpSpec(
+                profile = classifier.profile(),
+                stablePrefix = classifier.stablePrefix(),
+                throwawaySuffix = classifier.variableSuffix("warm up, ignore this"),
+            ),
+            WarmUpSpec(
+                profile = drafter.profile(),
+                stablePrefix = drafter.stablePrefix(),
+            ),
         )
     }
 

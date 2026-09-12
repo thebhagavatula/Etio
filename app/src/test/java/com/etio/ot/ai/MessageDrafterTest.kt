@@ -278,4 +278,28 @@ class MessageDrafterTest {
         assertEquals("On hold, 40 minutes expected.", drafts.getValue(Audience.WARD))
         assertEquals("Induction pushed back.", drafts.getValue(Audience.ANAESTHESIA))
     }
+
+    @Test
+    fun `all four audiences share one byte-identical prefix`() = runTest {
+        repeat(4) { engine.queueSuccess("Case 3 delayed.") }
+
+        drafter.draftAll(record(), case).toList()
+
+        val prefixes = engine.calls.map { it.stablePrefix }.toSet()
+        // Four messages, one primed cache. If the audience rule leaked into the
+        // prefix this would be four distinct prefixes and four full re-decodes.
+        assertEquals(1, prefixes.size)
+        assertEquals(4, engine.calls.map { it.variableSuffix }.toSet().size)
+    }
+
+    @Test
+    fun `the audience and its facts live in the suffix, not the prefix`() = runTest {
+        engine.queueSuccess("Case 3 delayed.")
+
+        drafter.draftOne(Audience.SURGEON, record(), case)
+
+        val call = engine.calls.single()
+        assertFalse(call.stablePrefix.contains("Surgeon"))
+        assertTrue(call.variableSuffix.contains("Surgeon"))
+    }
 }

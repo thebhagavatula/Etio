@@ -87,13 +87,24 @@ fun fakePromptSource(
     override fun taxonomy(): TaxonomyConfig = taxonomy
 }
 
-/** What one [RecordingLlmEngine.generate] call received. */
+/**
+ * What one [RecordingLlmEngine.generate] call received.
+ *
+ * [prompt] is the two halves concatenated, so assertions about prompt content read the
+ * same as they did before the split; [stablePrefix] and [variableSuffix] are kept apart
+ * for the assertions that care which half a thing landed in — which is the property
+ * that keeps the KV cache working.
+ */
 data class CapturedCall(
-    val prompt: String,
+    val profile: DecodeProfile,
+    val stablePrefix: String,
+    val variableSuffix: String,
     val maxTokens: Int,
-    val temperature: Float,
-    val topK: Int,
-)
+) {
+    val prompt: String get() = stablePrefix + variableSuffix
+    val temperature: Float get() = profile.temperature
+    val topK: Int get() = profile.topK
+}
 
 /**
  * Records every [generate] call and answers from a fixed queue of results, in order.
@@ -115,22 +126,22 @@ class RecordingLlmEngine(
     override suspend fun warmUp(): Result<Unit> = Result.success(Unit)
 
     override suspend fun generate(
-        prompt: String,
+        profile: DecodeProfile,
+        stablePrefix: String,
+        variableSuffix: String,
         maxTokens: Int,
-        temperature: Float,
-        topK: Int,
     ): Result<String> {
-        calls += CapturedCall(prompt, maxTokens, temperature, topK)
+        calls += CapturedCall(profile, stablePrefix, variableSuffix, maxTokens)
         check(responses.isNotEmpty()) { "RecordingLlmEngine.generate called with no response queued" }
         return responses.removeAt(0)
     }
 
     override fun generateStreaming(
-        prompt: String,
+        profile: DecodeProfile,
+        stablePrefix: String,
+        variableSuffix: String,
         maxTokens: Int,
-        temperature: Float,
-        topK: Int,
-    ): Flow<String> = flowOf(prompt)
+    ): Flow<String> = flowOf(stablePrefix + variableSuffix)
 
     override fun close() = Unit
 }

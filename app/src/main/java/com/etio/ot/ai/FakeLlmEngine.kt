@@ -23,22 +23,22 @@ class FakeLlmEngine : LlmEngine {
     override suspend fun warmUp(): Result<Unit> = Result.success(Unit)
 
     override suspend fun generate(
-        prompt: String,
+        profile: DecodeProfile,
+        stablePrefix: String,
+        variableSuffix: String,
         maxTokens: Int,
-        temperature: Float,
-        topK: Int,
     ): Result<String> {
         delay(1800)
-        return Result.success(canned(prompt))
+        return Result.success(canned(stablePrefix + variableSuffix))
     }
 
     override fun generateStreaming(
-        prompt: String,
+        profile: DecodeProfile,
+        stablePrefix: String,
+        variableSuffix: String,
         maxTokens: Int,
-        temperature: Float,
-        topK: Int,
     ): Flow<String> = flow {
-        val full = canned(prompt)
+        val full = canned(stablePrefix + variableSuffix)
         val sb = StringBuilder()
         full.split(" ").forEach { word ->
             delay(45)

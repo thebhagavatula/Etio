@@ -33,10 +33,10 @@ class MessageDrafter(
         Audience.demoOrder.forEach { audience ->
             val started = System.currentTimeMillis()
             val raw = engine.generate(
-                prompt = buildPrompt(audience, record, case, schedule),
+                profile = profile(),
+                stablePrefix = stablePrefix(),
+                variableSuffix = variableSuffix(audience, record, case, schedule),
                 maxTokens = cfg.maxTokens,
-                temperature = cfg.temperature,
-                topK = cfg.topK,
             ).getOrElse {
                 Log.e(TAG, "Job 2 failed for $audience", it)
                 fallbackBody(audience, record, case, schedule)
@@ -54,28 +54,50 @@ class MessageDrafter(
     ): String {
         val cfg = config.prompts().drafting
         val raw = engine.generate(
-            prompt = buildPrompt(audience, record, case, schedule),
+            profile = profile(),
+            stablePrefix = stablePrefix(),
+            variableSuffix = variableSuffix(audience, record, case, schedule),
             maxTokens = cfg.maxTokens,
-            temperature = cfg.temperature,
-            topK = cfg.topK,
         ).getOrElse { fallbackBody(audience, record, case, schedule) }
         return groundedBody(raw, audience, record, case, schedule)
     }
 
-    private fun buildPrompt(
+    fun profile(): DecodeProfile {
+        val cfg = config.prompts().drafting
+        return DecodeProfile(
+            name = DecodeProfile.DRAFT,
+            temperature = cfg.temperature,
+            topK = cfg.topK,
+        )
+    }
+
+    /**
+     * The half that is identical for all four audiences, so the four messages share
+     * one primed cache instead of re-decoding the instruction block four times.
+     */
+    fun stablePrefix(): String {
+        val prompts = config.prompts()
+        return GemmaChatTemplate.head(
+            buildString {
+                appendLine(prompts.systemPrefix)
+                appendLine()
+                append(prompts.drafting.instruction)
+            },
+        )
+    }
+
+    /** Audience, rule, and this delay's facts — everything that differs per call. */
+    fun variableSuffix(
         audience: Audience,
         record: DelayRecordEntity,
         case: CaseEntity?,
         schedule: ScheduleProjector.Shift?,
     ): String {
-        val prompts = config.prompts()
-        val cfg = prompts.drafting
+        val cfg = config.prompts().drafting
         val rule = cfg.audiences[audience.name]
 
         val userContent = buildString {
-            appendLine(prompts.systemPrefix)
             appendLine()
-            appendLine(cfg.instruction)
             appendLine()
             appendLine("Audience: ${audience.display}")
             rule?.let {
@@ -120,7 +142,7 @@ class MessageDrafter(
                 append(ex)
             }
         }
-        return GemmaChatTemplate.wrap(userContent, modelPrefix = "Message for ${audience.display}:")
+        return GemmaChatTemplate.tail(userContent, modelPrefix = "Message for ${audience.display}:")
     }
 
     /** Used only when inference fails. Deterministic, obviously templated, never blank. */

@@ -5,6 +5,7 @@ import com.etio.ot.data.model.DelayCode
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -106,5 +107,64 @@ class DelayClassifierTest {
         assertEquals("set came back wet", parsed.note)
         assertTrue(parsed.fellBack)
         assertEquals(0f, parsed.confidence, 0.001f)
+    }
+
+    @Test
+    fun `the stable prefix is byte-identical across different transcripts`() = runTest {
+        engine.queueSuccess("""{"code":"OTHER","note":"x"}""")
+        engine.queueSuccess("""{"code":"OTHER","note":"x"}""")
+
+        classifier.classify("set came back wet, CSSD says forty minutes")
+        classifier.classify("porter has not come, patient still upstairs")
+
+        val (first, second) = engine.calls
+        // This is the whole session-hygiene claim: if the prefix ever varies, the
+        // primed KV cache is discarded and every classification pays for the full
+        // prompt again. Byte-identical, not merely equivalent.
+        assertEquals(first.stablePrefix, second.stablePrefix)
+        assertNotEquals(first.variableSuffix, second.variableSuffix)
+    }
+
+    @Test
+    fun `the transcript never leaks into the stable prefix`() = runTest {
+        engine.queueSuccess("""{"code":"OTHER","note":"x"}""")
+
+        // Deliberately unlike any few-shot example, so a hit is a real leak rather
+        // than an overlap with the fixture's own sample utterances.
+        val utterance = "quaffle trolley jammed in lift seven"
+        classifier.classify(utterance)
+
+        val call = engine.calls.single()
+        assertFalse(
+            "transcript found in the cached prefix — the cache would be rebuilt every call",
+            call.stablePrefix.contains(utterance),
+        )
+        assertTrue(call.variableSuffix.contains(utterance))
+    }
+
+    @Test
+    fun `the allowed code list is restated immediately before the output instruction`() = runTest {
+        engine.queueSuccess("""{"code":"OTHER","note":"x"}""")
+
+        classifier.classify("anything")
+
+        val prefix = engine.calls.single().stablePrefix
+        val codeList = prefix.indexOf("The only allowed values for \"code\" are, exactly:")
+        val instruction = prefix.indexOf(fakePrompts().classification.instruction)
+        assertTrue("code list missing from the prefix", codeList >= 0)
+        // A 1B model attends to the last constraint it read; the codes have to be it.
+        assertTrue("code list must come after the examples and before the instruction", codeList < instruction)
+    }
+
+    @Test
+    fun `the classify profile is greedy and comes from config`() = runTest {
+        engine.queueSuccess("""{"code":"OTHER","note":"x"}""")
+
+        classifier.classify("anything")
+
+        val profile = engine.calls.single().profile
+        assertEquals(DecodeProfile.CLASSIFY, profile.name)
+        assertEquals(fakePrompts().classification.temperature, profile.temperature, 0.0001f)
+        assertEquals(fakePrompts().classification.topK, profile.topK)
     }
 }
