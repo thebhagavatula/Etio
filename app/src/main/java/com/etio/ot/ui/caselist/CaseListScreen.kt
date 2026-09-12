@@ -152,13 +152,8 @@ fun CaseListScreen(
                                 append(state.cases.firstOrNull()?.theatreId ?: "—")
                                 focusCase?.let { append(" · Case ${it.caseNumber}") }
                                 append(" · ")
-                                append(
-                                    if (dayComplete) {
-                                        "day complete"
-                                    } else {
-                                        state.metrics.runningVarianceMin.asDayStanding()
-                                    },
-                                )
+                                if (dayComplete) append("day complete · ")
+                                append(state.metrics.runningVarianceMin.asDayStanding())
                             },
                             style = MaterialTheme.typography.titleMedium.tabular(),
                         )
