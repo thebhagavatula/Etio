@@ -9,7 +9,8 @@ import com.etio.ot.data.local.entity.GeneratedMessageEntity
 import com.etio.ot.data.model.Audience
 import com.etio.ot.data.repository.CaseRepository
 import com.etio.ot.data.repository.DelayRepository
-import com.etio.ot.di.ServiceLocator
+import com.etio.ot.di.AiModule
+import com.etio.ot.di.CoreModule
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,8 +22,8 @@ import kotlinx.coroutines.launch
  */
 class MessagesViewModel(
     private val delayId: String,
-    private val delays: DelayRepository = ServiceLocator.delayRepository,
-    private val cases: CaseRepository = ServiceLocator.caseRepository,
+    private val delays: DelayRepository = AiModule.delayRepository,
+    private val cases: CaseRepository = CoreModule.caseRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(MessagesUiState())

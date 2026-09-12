@@ -1,0 +1,54 @@
+# GitHub reads CODEOWNERS from the repo root, .github/ or docs/. Root is used
+# here. Move it to .github/CODEOWNERS if you prefer; the contents are identical.
+#
+# Replace the placeholder handles with real GitHub usernames before the first push.
+#
+#   @spine-owner   — case list, timers, Room, build files
+#   @ai-owner      — MediaPipe, ASR, classification, drafting
+#   @safety-owner  — WHO checklist, end-of-day report
+#
+# Last matching rule wins, so the frozen block at the bottom overrides everything.
+
+# ---- spine -----------------------------------------------------------------
+/app/src/main/java/com/etio/ot/data/local/            @spine-owner
+/app/src/main/java/com/etio/ot/data/config/           @spine-owner
+/app/src/main/java/com/etio/ot/data/repository/CaseRepository.kt  @spine-owner
+/app/src/main/java/com/etio/ot/domain/timing/         @spine-owner
+/app/src/main/java/com/etio/ot/ui/caselist/           @spine-owner
+/app/src/main/java/com/etio/ot/ui/events/             @spine-owner
+/app/src/main/java/com/etio/ot/ui/theme/              @spine-owner
+/app/src/main/java/com/etio/ot/di/CoreModule.kt       @spine-owner
+/app/src/main/assets/config/seed_cases.json           @spine-owner
+/app/build.gradle.kts                                 @spine-owner
+/build.gradle.kts                                     @spine-owner
+/settings.gradle.kts                                  @spine-owner
+/gradle/                                              @spine-owner
+
+# ---- ai --------------------------------------------------------------------
+/app/src/main/java/com/etio/ot/ai/                    @ai-owner
+/app/src/main/java/com/etio/ot/data/repository/DelayRepository.kt @ai-owner
+/app/src/main/java/com/etio/ot/ui/delay/              @ai-owner
+/app/src/main/java/com/etio/ot/ui/messages/           @ai-owner
+/app/src/main/java/com/etio/ot/di/AiModule.kt         @ai-owner
+/app/src/main/assets/config/prompts.json              @ai-owner
+/app/src/main/assets/config/taxonomy.json             @ai-owner
+
+# ---- safety ----------------------------------------------------------------
+/app/src/main/java/com/etio/ot/domain/checklist/      @safety-owner
+/app/src/main/java/com/etio/ot/domain/report/         @safety-owner
+/app/src/main/java/com/etio/ot/data/repository/ChecklistRepository.kt @safety-owner
+/app/src/main/java/com/etio/ot/ui/checklist/          @safety-owner
+/app/src/main/java/com/etio/ot/ui/report/             @safety-owner
+/app/src/main/java/com/etio/ot/di/SafetyModule.kt     @safety-owner
+/app/src/main/assets/config/checklist.json            @safety-owner
+
+# ---- frozen: needs all three ------------------------------------------------
+/app/src/main/java/com/etio/ot/di/ServiceLocator.kt   @spine-owner @ai-owner @safety-owner
+/app/src/main/java/com/etio/ot/ui/Routes.kt           @spine-owner @ai-owner @safety-owner
+/app/src/main/java/com/etio/ot/ui/EtioApp.kt          @spine-owner @ai-owner @safety-owner
+/app/src/main/java/com/etio/ot/EtioApplication.kt     @spine-owner @ai-owner @safety-owner
+/app/src/main/java/com/etio/ot/MainActivity.kt        @spine-owner @ai-owner @safety-owner
+/app/src/main/java/com/etio/ot/core/                  @spine-owner @ai-owner @safety-owner
+/app/src/main/java/com/etio/ot/data/model/Enums.kt    @spine-owner @ai-owner @safety-owner
+/app/src/main/java/com/etio/ot/data/local/entity/Entities.kt @spine-owner @ai-owner @safety-owner
+/app/src/main/AndroidManifest.xml                     @spine-owner @ai-owner @safety-owner

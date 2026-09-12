@@ -10,7 +10,8 @@ import com.etio.ot.data.model.Avoidability
 import com.etio.ot.data.model.DelayCode
 import com.etio.ot.data.repository.CaseRepository
 import com.etio.ot.data.repository.DelayRepository
-import com.etio.ot.di.ServiceLocator
+import com.etio.ot.di.AiModule
+import com.etio.ot.di.CoreModule
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,10 +28,10 @@ import kotlinx.coroutines.launch
  */
 class DelayCaptureViewModel(
     private val caseId: String,
-    private val speech: SpeechCapture = ServiceLocator.speechCapture,
-    private val delays: DelayRepository = ServiceLocator.delayRepository,
-    private val cases: CaseRepository = ServiceLocator.caseRepository,
-    private val engine: LlmEngine = ServiceLocator.llmEngine,
+    private val speech: SpeechCapture = AiModule.speechCapture,
+    private val delays: DelayRepository = AiModule.delayRepository,
+    private val cases: CaseRepository = CoreModule.caseRepository,
+    private val engine: LlmEngine = AiModule.llmEngine,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(DelayCaptureUiState())

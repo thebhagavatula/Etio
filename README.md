@@ -14,7 +14,9 @@ Native Android · Kotlin · Jetpack Compose · Room · MediaPipe LLM Inference (
 4. Install the offline **Indian English** speech pack: Settings → Google → Voice → Offline speech recognition → add `English (India)`. Without it, ASR fails the moment airplane mode goes on.
 5. `./gradlew installDebug`, open the app, watch Logcat for `LLM warm`. The banner at the top of the delay screen shows the backend and load time.
 
-Until the model is on the device, flip `ServiceLocator.USE_FAKE_LLM = true` — the entire UI, timer and checklist path works against `FakeLlmEngine`, which returns canned responses at realistic latency.
+Working as a team? Read **BRANCHES.md** before anyone writes code — it defines the three branches, who owns which files, and the merge protocol.
+
+Until the model is on the device, flip `AiModule.USE_FAKE_LLM = true` — the entire UI, timer and checklist path works against `FakeLlmEngine`, which returns canned responses at realistic latency.
 
 ## Model file
 
@@ -58,6 +60,8 @@ Red Light hours are then: edit JSON in a phone text editor → force-stop → re
 ```
 ui/            Compose screens + ViewModels. Nothing here awaits inference
                except DelayCaptureViewModel, on purpose.
+  Routes.kt    FROZEN. Every route string, declared up front.
+  EtioApp.kt   FROZEN. NavHost composing three per-slice graphs.
 domain/        Pure Kotlin. No Android imports, no coroutines, no I/O.
   timing/      TimerEngine — a pure function of (cases, events, now).
   checklist/   ChecklistStateMachine — the deterministic safety gate.
@@ -66,8 +70,14 @@ ai/            LlmEngine interface + MediaPipe impl + Fake impl.
                DelayClassifier (Job 1), MessageDrafter (Job 2),
                DelayJsonValidator (the actual guarantee), SpeechCapture.
 data/          Room entities/DAOs/database, ConfigProvider, repositories.
-di/            ServiceLocator. Manual DI — no Hilt, deliberately.
+di/            Manual DI — no Hilt, deliberately. One module per slice:
+               CoreModule (config, db, cases), AiModule (LLM, ASR, delays),
+               SafetyModule (checklist). ServiceLocator is a frozen shell
+               holding only the app context and clock.
 ```
+
+The `di` and nav split is not ceremony — it is what lets three people work in
+parallel without editing the same files. See **BRANCHES.md**.
 
 ### Three invariants worth defending in review
 

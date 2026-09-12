@@ -1,0 +1,740 @@
+<title>Etio Three-Lane Branch Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;600&display=swap">
+
+<style>
+:root {
+  --ground:    #F2F4F7;
+  --surface:   #FFFFFF;
+  --surface-2: #E8ECF2;
+  --ink:       #0F1419;
+  --ink-2:     #48525F;
+  --ink-3:     #7C8694;
+  --rule:      #D4DAE2;
+  --rule-soft: #E3E8EE;
+  --spine:     #2A5FD0;
+  --ai:        #9E5C08;
+  --safety:    #146B47;
+  --frozen:    #A32E25;
+  --spine-bg:  #E4EBFA;
+  --ai-bg:     #F7EBDA;
+  --safety-bg: #DEEFE7;
+  --frozen-bg: #F8E4E2;
+
+  --display: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+  --body: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground:    #0E1116;
+    --surface:   #161B23;
+    --surface-2: #1D242E;
+    --ink:       #E7ECF3;
+    --ink-2:     #A3AEBD;
+    --ink-3:     #6D7886;
+    --rule:      #29323F;
+    --rule-soft: #1F2732;
+    --spine:     #7BA6FF;
+    --ai:        #E3A855;
+    --safety:    #55C692;
+    --frozen:    #FF8577;
+    --spine-bg:  #16203A;
+    --ai-bg:     #2C2214;
+    --safety-bg: #12291F;
+    --frozen-bg: #2E1918;
+  }
+}
+
+:root[data-theme="dark"] {
+  --ground:    #0E1116;
+  --surface:   #161B23;
+  --surface-2: #1D242E;
+  --ink:       #E7ECF3;
+  --ink-2:     #A3AEBD;
+  --ink-3:     #6D7886;
+  --rule:      #29323F;
+  --rule-soft: #1F2732;
+  --spine:     #7BA6FF;
+  --ai:        #E3A855;
+  --safety:    #55C692;
+  --frozen:    #FF8577;
+  --spine-bg:  #16203A;
+  --ai-bg:     #2C2214;
+  --safety-bg: #12291F;
+  --frozen-bg: #2E1918;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 17px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding-inline: 20px;
+  padding-block: 0 88px;
+}
+
+/* ---------- masthead ---------- */
+
+.mast {
+  border-bottom: 2px solid var(--ink);
+  padding-block: 52px 20px;
+  margin-bottom: 40px;
+}
+
+.kicker {
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 0 0 14px;
+}
+
+h1 {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: clamp(34px, 6vw, 54px);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  margin: 0 0 18px;
+  text-wrap: balance;
+}
+
+.thesis {
+  font-size: clamp(18px, 2.4vw, 21px);
+  line-height: 1.5;
+  color: var(--ink-2);
+  max-width: 60ch;
+  margin: 0;
+}
+
+/* ---------- lane legend ---------- */
+
+.legend {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  margin-block: 34px 0;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+}
+
+.legend > div {
+  background: var(--surface);
+  padding: 16px 18px 18px;
+  border-top: 4px solid var(--lane);
+}
+
+.legend .br {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--lane);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.legend .what {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 1.32;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.legend .who {
+  font-size: 14.5px;
+  line-height: 1.45;
+  color: var(--ink-2);
+  margin: 0;
+}
+
+.lane-spine  { --lane: var(--spine); }
+.lane-ai     { --lane: var(--ai); }
+.lane-safety { --lane: var(--safety); }
+.lane-frozen { --lane: var(--frozen); }
+
+/* ---------- sections ---------- */
+
+section { margin-top: 56px; }
+
+h2 {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--ink);
+  margin: 0 0 6px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.sub {
+  color: var(--ink-3);
+  font-size: 15px;
+  margin: 0 0 24px;
+  max-width: 62ch;
+}
+
+p { max-width: 68ch; }
+p + p { margin-top: 1em; }
+
+h3 {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+  margin: 32px 0 8px;
+}
+
+code {
+  font-family: var(--mono);
+  font-size: 0.86em;
+  background: var(--surface-2);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+pre {
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.62;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--ink-3);
+  padding: 16px 18px;
+  overflow-x: auto;
+  margin: 18px 0;
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+.cm { color: var(--ink-3); }
+
+/* ---------- ownership lanes ---------- */
+
+.lanes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-top: 24px;
+}
+
+.lane {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-top: 4px solid var(--lane);
+  padding: 18px 18px 20px;
+}
+
+.lane h4 {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--lane);
+  margin: 0 0 4px;
+}
+
+.lane .feat {
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 0 0 14px;
+}
+
+.lane ul { list-style: none; padding: 0; margin: 0; }
+
+.lane li {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.5;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--rule-soft);
+  word-break: break-word;
+}
+.lane li:last-child { border-bottom: none; }
+.lane li span {
+  display: block;
+  font-family: var(--body);
+  font-size: 13px;
+  color: var(--ink-3);
+  line-height: 1.35;
+  margin-top: 1px;
+}
+
+.lane .note {
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--ink-2);
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+}
+
+/* ---------- frozen ---------- */
+
+.frozen {
+  background: var(--frozen-bg);
+  border: 1px solid var(--frozen);
+  padding: 22px 24px 24px;
+  margin-top: 24px;
+}
+
+.frozen h3 { margin-top: 0; color: var(--frozen); }
+
+.frozen-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 3px 22px;
+  list-style: none;
+  padding: 0;
+  margin: 14px 0 18px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+}
+
+.frozen p { color: var(--ink-2); font-size: 15px; margin: 0; max-width: 66ch; }
+
+/* ---------- why disjoint ---------- */
+
+.why {
+  display: grid;
+  gap: 18px;
+  margin-top: 22px;
+}
+
+.why article {
+  display: grid;
+  grid-template-columns: 190px 1fr;
+  gap: 26px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--rule);
+}
+.why article:last-child { border-bottom: none; padding-bottom: 0; }
+
+.why h4 {
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.3;
+}
+.why h4 em {
+  display: block;
+  font-family: var(--mono);
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--ink-3);
+  margin-top: 4px;
+}
+.why p { margin: 0; font-size: 15.5px; }
+
+/* ---------- tables ---------- */
+
+.tablewrap { overflow-x: auto; margin-top: 22px; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+  min-width: 560px;
+}
+
+th {
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  text-align: left;
+  padding: 0 16px 9px 0;
+  border-bottom: 1px solid var(--ink-3);
+  white-space: nowrap;
+}
+
+td {
+  padding: 13px 16px 13px 0;
+  border-bottom: 1px solid var(--rule-soft);
+  vertical-align: top;
+  line-height: 1.42;
+}
+td:first-child { font-family: var(--display); font-weight: 600; font-size: 14.5px; white-space: nowrap; }
+td b { font-family: var(--display); font-weight: 600; }
+
+/* ---------- merge order (a real sequence) ---------- */
+
+.order { list-style: none; padding: 0; margin: 22px 0 0; counter-reset: step; }
+
+.order li {
+  counter-increment: step;
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 18px;
+  align-items: start;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--rule-soft);
+}
+.order li:last-child { border-bottom: none; }
+
+.order li::before {
+  content: counter(step);
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--surface);
+  background: var(--lane);
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  margin-top: 2px;
+}
+
+.order .br {
+  font-family: var(--mono);
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--lane);
+}
+.order .why-it { display: block; font-size: 15px; color: var(--ink-2); margin-top: 3px; line-height: 1.42; }
+
+/* ---------- checklist ---------- */
+
+.check { list-style: none; padding: 0; margin: 22px 0 0; }
+
+.check li {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 14px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--rule-soft);
+  font-size: 15.5px;
+  line-height: 1.45;
+}
+.check li:last-child { border-bottom: none; }
+.check li::before {
+  content: "";
+  width: 15px; height: 15px;
+  border: 1.5px solid var(--ink-3);
+  border-radius: 3px;
+  margin-top: 5px;
+}
+
+/* ---------- rules ---------- */
+
+.rules { display: grid; gap: 0; margin-top: 22px; }
+
+.rules div {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--rule-soft);
+}
+.rules div:last-child { border-bottom: none; }
+.rules strong {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 15.5px;
+  display: block;
+  margin-bottom: 3px;
+}
+.rules p { margin: 0; font-size: 15px; color: var(--ink-2); }
+
+.foot {
+  margin-top: 56px;
+  padding-top: 20px;
+  border-top: 2px solid var(--ink);
+  font-size: 14px;
+  color: var(--ink-3);
+  max-width: 70ch;
+}
+
+@media (max-width: 860px) {
+  .lanes, .legend { grid-template-columns: 1fr; }
+  .legend { gap: 1px; }
+  .why article { grid-template-columns: 1fr; gap: 8px; }
+}
+</style>
+
+<div class="wrap">
+
+  <header class="mast">
+    <p class="kicker">Etio &middot; iQOO Hackathon 2026 &middot; Working agreement</p>
+    <h1>Three lanes, no collisions</h1>
+    <p class="thesis">Three vertical slices, each one a branch that compiles and demos alone. The scaffold has already been refactored so the lanes do not overlap &mdash; that refactor is the whole reason these merges can be atomic.</p>
+
+    <div class="legend">
+      <div class="lane-spine">
+        <span class="br">feat/spine</span>
+        <span class="what">Case list, event marking, live timers, Room</span>
+        <p class="who">Strongest on Android and Compose. Also owns the build files.</p>
+      </div>
+      <div class="lane-ai">
+        <span class="br">feat/ai</span>
+        <span class="what">MediaPipe, ASR, classification, four-audience drafting</span>
+        <p class="who">Most comfortable with the risky unknown. Starts first.</p>
+      </div>
+      <div class="lane-safety">
+        <span class="br">feat/safety</span>
+        <span class="what">WHO checklist, end-of-day report, Office Kit bridge</span>
+        <p class="who">Steadiest. Most self-contained, most forgiving of a slow start.</p>
+      </div>
+    </div>
+  </header>
+
+  <section>
+    <h2>Assignment</h2>
+    <p class="sub">By risk, not preference.</p>
+    <p>The AI slice carries the two fatal risks in the PRD risk register: the model failing to load or OOM-ing on a loaner phone you do not control, and offline ASR mangling clinical nouns like CSSD and propofol. It gets your strongest person and the earliest start, because a failure there at hour 26 ends the project and a failure at hour 2 is just a morning.</p>
+    <p>The safety slice is fully deterministic &mdash; <code>ChecklistStateMachine</code>, <code>TimerEngine</code> and <code>EndOfDayReportBuilder</code> are pure Kotlin with no Android imports, no coroutines and no I/O. Most of it can be written and tested with <code>./gradlew testDebugUnitTest</code> and no phone at all, which is why it survives whoever has to sleep first.</p>
+
+    <pre><code><span class="cm"># one time, from main</span>
+git checkout main &amp;&amp; git pull
+
+git checkout -b feat/spine  main &amp;&amp; git push -u origin feat/spine
+git checkout -b feat/ai     main &amp;&amp; git push -u origin feat/ai
+git checkout -b feat/safety main &amp;&amp; git push -u origin feat/safety
+
+git checkout main</code></pre>
+    <p>Nobody commits to <code>main</code> except during an integration round.</p>
+  </section>
+
+  <section>
+    <h2>Ownership</h2>
+    <p class="sub">Paths under <code>app/src/main/java/com/etio/ot/</code> unless noted. If a file is not in your column, you do not edit it &mdash; you ask.</p>
+
+    <div class="lanes">
+
+      <div class="lane lane-spine">
+        <h4>feat/spine</h4>
+        <p class="feat">PRD F1 &middot; F2 &middot; F3</p>
+        <ul>
+          <li>data/local/**<span>entities, DAOs, database, converters</span></li>
+          <li>data/config/**<span>ConfigProvider, ConfigModels</span></li>
+          <li>data/repository/CaseRepository.kt</li>
+          <li>domain/timing/**<span>TimerEngine, DayMetrics</span></li>
+          <li>ui/caselist/**<span>screen, card, ViewModel, SpineNav</span></li>
+          <li>ui/events/**<span>EventGrid</span></li>
+          <li>ui/theme/**</li>
+          <li>di/CoreModule.kt</li>
+          <li>assets/config/seed_cases.json</li>
+          <li>res/**</li>
+          <li>build.gradle.kts &middot; gradle/**</li>
+        </ul>
+        <p class="note">Spine owns the build files. Need a dependency? Ask. Two people in <code>libs.versions.toml</code> is the most annoying conflict available.</p>
+      </div>
+
+      <div class="lane lane-ai">
+        <h4>feat/ai</h4>
+        <p class="feat">PRD F4 &middot; F5</p>
+        <ul>
+          <li>ai/**<span>LlmEngine, MediaPipe, Fake, Classifier, Drafter, Validator, SpeechCapture</span></li>
+          <li>data/repository/DelayRepository.kt</li>
+          <li>ui/delay/**<span>capture screen, review card, ViewModel, AiNav</span></li>
+          <li>ui/messages/**<span>four-audience screen</span></li>
+          <li>di/AiModule.kt</li>
+          <li>assets/config/prompts.json</li>
+          <li>assets/config/taxonomy.json</li>
+          <li>test/&hellip;/DelayJsonValidatorTest.kt</li>
+        </ul>
+        <p class="note">Owns both Red Light tuning surfaces. Prompt and taxonomy changes should never require a recompile &mdash; if they do, something is hardcoded that should not be.</p>
+      </div>
+
+      <div class="lane lane-safety">
+        <h4>feat/safety</h4>
+        <p class="feat">PRD F6 &middot; F7 &middot; F8</p>
+        <ul>
+          <li>domain/checklist/**<span>ChecklistStateMachine</span></li>
+          <li>domain/report/**<span>EndOfDayReportBuilder</span></li>
+          <li>data/repository/ChecklistRepository.kt</li>
+          <li>ui/checklist/**<span>dialog, GateController, ChecklistHost</span></li>
+          <li>ui/report/**<span>ReportScreen, ViewModel, SafetyNav</span></li>
+          <li>di/SafetyModule.kt</li>
+          <li>assets/config/checklist.json</li>
+          <li>test/&hellip;/ChecklistStateMachineTest.kt</li>
+        </ul>
+        <p class="note">The checklist is a safety artefact. No model involvement, ever &mdash; that is the answer when a judge asks how you avoid falsely marking an item verified.</p>
+      </div>
+
+    </div>
+
+    <div class="frozen lane-frozen">
+      <h3>Frozen &mdash; changing these needs all three of you</h3>
+      <ul class="frozen-list">
+        <li>di/ServiceLocator.kt</li>
+        <li>ui/Routes.kt</li>
+        <li>ui/EtioApp.kt</li>
+        <li>EtioApplication.kt</li>
+        <li>MainActivity.kt</li>
+        <li>core/**</li>
+        <li>data/model/Enums.kt</li>
+        <li>data/local/entity/Entities.kt</li>
+        <li>AndroidManifest.xml</li>
+        <li>.gitattributes &middot; CODEOWNERS</li>
+      </ul>
+      <p><code>Entities.kt</code> and <code>Enums.kt</code> are the two that will tempt you, and both are frozen from the moment you branch. The schema was designed against PRD &sect;8 and every slice reads it. If you genuinely need a column, that is a sixty-second conversation and one commit on <code>main</code> that everyone rebases onto &mdash; not a change on your branch.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Why the lanes are actually disjoint</h2>
+    <p class="sub">Three files used to be edited by all three slices. They have been split so that is no longer true.</p>
+
+    <div class="why">
+      <article>
+        <h4>Dependency injection<em>di/ServiceLocator.kt</em></h4>
+        <p>Was one object holding every dependency. Now a frozen shell holding the app context and clock, with <code>CoreModule</code>, <code>AiModule</code> and <code>SafetyModule</code> beside it &mdash; one per slice, one owner each. Dependencies point one way: AI and safety may read Core; Core reads neither.</p>
+      </article>
+
+      <article>
+        <h4>Navigation<em>ui/EtioApp.kt</em></h4>
+        <p>Used to declare all four destinations inline. Now calls three extension functions &mdash; <code>spineGraph()</code>, <code>aiGraph()</code>, <code>safetyGraph()</code> &mdash; each in a file its slice owns. Every route string lives in the frozen <code>Routes.kt</code>, so the spine branch can navigate to a screen the AI branch has not written yet.</p>
+      </article>
+
+      <article>
+        <h4>The checklist gate<em>ui/caselist/CaseListViewModel.kt</em></h4>
+        <p>Used to contain the gating logic, the dialog state and five checklist methods &mdash; safety-branch code living in a spine-branch file. All of it now sits behind <code>ChecklistGateController</code>, which safety owns. The spine branch's entire contact with the checklist is three calls, and that surface is a contract: if safety needs different behaviour, it changes <em>inside</em> the controller.</p>
+      </article>
+    </div>
+
+    <pre><code><span class="cm">// the whole spine-to-safety interface, in CaseListViewModel + CaseListScreen</span>
+if (!checklistGate.allows(caseId, type, marked)) return@launch
+checklistGate.onEventMarked(caseId, type)
+ChecklistHost(viewModel.checklistGate, snackbar)</code></pre>
+  </section>
+
+  <section>
+    <h2>Working without the other slices</h2>
+    <p class="sub">Every branch compiles and runs alone from day one, because every screen already exists as real code on main.</p>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Branch</th><th>How you work solo</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="color:var(--spine)">feat/spine</td>
+            <td>Set <code>AiModule.USE_FAKE_LLM = true</code> locally &mdash; the delay path returns canned responses at realistic latency, so you design the UX against timing you will actually have. <b>Do not commit that flip.</b> The pre-merge script fails the branch if you do.</td>
+          </tr>
+          <tr>
+            <td style="color:var(--ai)">feat/ai</td>
+            <td>The case list, live timers and five seeded cases are already on <code>main</code>, so you have a real case to attach a delay to on your first run.</td>
+          </tr>
+          <tr>
+            <td style="color:var(--safety)">feat/safety</td>
+            <td>Your three engines are pure Kotlin. Most of this slice is built and verified with <code>./gradlew testDebugUnitTest</code> &mdash; no phone, no model file, no waiting for a device.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Integration rounds</h2>
+    <p class="sub">Merge at fixed points, all three of you present, one branch at a time. Never opportunistically when you happen to finish something.</p>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>When</th><th>Round</th><th>Goal</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>End of first Green Light</td><td><b>R0 &mdash; smoke</b></td><td>Everyone merges whatever exists, even if thin. The point is proving the merge mechanics work while it is cheap.</td></tr>
+          <tr><td>Before Evaluation 1</td><td><b>R1 &mdash; spine + one</b></td><td>The spine plus one working delay classification. Not messages yet.</td></tr>
+          <tr><td>Before the Red Light rotation</td><td><b>R2 &mdash; hardened</b></td><td>Job 1 validated with the OTHER fallback, checklist state machine landed. Whoever sleeps first merges first.</td></tr>
+          <tr><td>Feature freeze</td><td><b>R3 &mdash; final</b></td><td>Everything. Nothing new merges after this &mdash; bug fixes on the demo path only.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Merge order within a round &mdash; always the same</h3>
+    <ol class="order">
+      <li class="lane-spine">
+        <div><span class="br">feat/spine &rarr; main</span>
+        <span class="why-it">No dependencies. Carries the build files and the Room schema, so everything downstream compiles against a settled base.</span></div>
+      </li>
+      <li class="lane-ai">
+        <div><span class="br">feat/ai &rarr; main</span>
+        <span class="why-it">Depends on Core. Highest-risk slice, so it integrates while there is still time to back it out and try again.</span></div>
+      </li>
+      <li class="lane-safety">
+        <div><span class="br">feat/safety &rarr; main</span>
+        <span class="why-it">Depends on Core. Smallest surface and no runtime coupling to the model, so it is the safest thing to land last.</span></div>
+      </li>
+    </ol>
+
+    <h3>The procedure</h3>
+    <pre><code><span class="cm"># each person, on their own branch, before the round</span>
+git fetch origin
+git rebase origin/main              <span class="cm"># rebase, not merge</span>
+bash tools/check-boundaries.sh      <span class="cm"># must exit 0</span>
+./gradlew assembleDebug testDebugUnitTest
+git push --force-with-lease
+
+<span class="cm"># then, one at a time, in the order above</span>
+git checkout main &amp;&amp; git pull
+git merge --no-ff feat/spine -m "Merge spine: &lt;what landed&gt;"
+./gradlew assembleDebug testDebugUnitTest
+git push</code></pre>
+
+    <p><code>--no-ff</code> keeps each slice as one identifiable merge commit, so <code>git revert -m 1 &lt;sha&gt;</code> backs out a whole slice cleanly if it turns out to have broken the demo path. That is the atomic part: a slice lands as one unit, or it is removed as one unit. After <code>main</code> is green, everyone rebases onto it again before continuing.</p>
+  </section>
+
+  <section>
+    <h2>Pre-merge checklist</h2>
+    <p class="sub"><code>tools/check-boundaries.sh</code> automates the first one. It is in the repo.</p>
+    <ul class="check">
+      <li><code>bash tools/check-boundaries.sh</code> exits 0 &mdash; no frozen files touched, no other slice's files touched, <code>USE_FAKE_LLM</code> back to <code>false</code>.</li>
+      <li><code>./gradlew assembleDebug testDebugUnitTest</code> is green.</li>
+      <li>The app launches and <em>your</em> slice's demo path works on the actual loaner phone, not a dev phone.</li>
+      <li>You rebased onto <code>origin/main</code> within the last few minutes, not an hour ago.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Rules worth the friction</h2>
+    <div class="rules">
+      <div>
+        <strong>Rebase your branch onto main. Merge your branch into main.</strong>
+        <p>Never <code>git merge main</code> into a feature branch. It braids the history and turns reverting a bad slice into archaeology.</p>
+      </div>
+      <div>
+        <strong>Never commit the model file.</strong>
+        <p><code>.gitignore</code> already excludes <code>*.task</code>, <code>*.bin</code> and <code>*.tflite</code>. A 550&nbsp;MB blob in the history cannot be removed in a hurry.</p>
+      </div>
+      <div>
+        <strong>Never force-push main.</strong>
+        <p><code>--force-with-lease</code> on your own feature branch after a rebase is fine and expected.</p>
+      </div>
+      <div>
+        <strong>Commit messages say what landed, not what you did.</strong>
+        <p>&ldquo;Job 1 validated JSON + OTHER fallback&rdquo; beats &ldquo;fix stuff&rdquo;. At the fourth round you will be reading these to work out what is safe to revert.</p>
+      </div>
+      <div>
+        <strong>Red Light hours produce JSON diffs, not Kotlin diffs.</strong>
+        <p>Prompt, taxonomy and checklist tuning all happen in <code>assets/config/*.json</code>, each file owned by exactly one slice. No compiler, no merge conflict.</p>
+      </div>
+    </div>
+  </section>
+
+  <p class="foot">The full plan lives in <code>BRANCHES.md</code> at the repo root, alongside <code>CODEOWNERS</code> and <code>tools/check-boundaries.sh</code>. Replace the placeholder handles in <code>CODEOWNERS</code> with real GitHub usernames before the first push.</p>
+
+</div>

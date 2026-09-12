@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.flow
 
 /**
  * Lets the entire UI, timer and checklist path be built and demoed before the model
- * file is on the device. Flip [com.etio.ot.di.ServiceLocator.USE_FAKE_LLM] to use it.
+ * file is on the device. Flip [com.etio.ot.di.AiModule.USE_FAKE_LLM] to use it.
  *
  * Latency is simulated at the PRD §10 targets so the UX is designed against realistic
  * timing rather than instant responses.

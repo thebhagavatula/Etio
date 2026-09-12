@@ -5,7 +5,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.etio.ot.data.repository.CaseRepository
 import com.etio.ot.data.repository.DelayRepository
-import com.etio.ot.di.ServiceLocator
+import com.etio.ot.di.AiModule
+import com.etio.ot.di.CoreModule
 import com.etio.ot.domain.report.EndOfDayReport
 import com.etio.ot.domain.report.EndOfDayReportBuilder
 import com.etio.ot.domain.timing.TimerEngine
@@ -16,8 +17,8 @@ import kotlinx.coroutines.launch
 
 /** Pure aggregation over stored rows. No inference anywhere on this path. */
 class ReportViewModel(
-    private val cases: CaseRepository = ServiceLocator.caseRepository,
-    private val delays: DelayRepository = ServiceLocator.delayRepository,
+    private val cases: CaseRepository = CoreModule.caseRepository,
+    private val delays: DelayRepository = AiModule.delayRepository,
 ) : ViewModel() {
 
     private val _report = MutableStateFlow(EndOfDayReport.Empty)

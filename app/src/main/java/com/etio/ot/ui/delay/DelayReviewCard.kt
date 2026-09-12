@@ -33,7 +33,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import com.etio.ot.data.local.entity.DelayRecordEntity
 import com.etio.ot.data.model.Avoidability
 import com.etio.ot.data.model.DelayCode
-import com.etio.ot.di.ServiceLocator
+import com.etio.ot.di.CoreModule
 
 /**
  * PRD §7 F4. Every model-assigned field is one tap from being corrected, and the
@@ -56,7 +56,7 @@ fun DelayReviewCard(
     var expandCodes by remember { mutableStateOf(false) }
     var noteDraft by remember(record.id) { mutableStateOf(record.note) }
     var estimateDraft by remember(record.id) { mutableStateOf(record.estimatedMin?.toString().orEmpty()) }
-    val depts = remember { ServiceLocator.config.taxonomy().departmentHints }
+    val depts = remember { CoreModule.config.taxonomy().departmentHints }
 
     Card(modifier = modifier) {
         Column(Modifier.padding(16.dp)) {

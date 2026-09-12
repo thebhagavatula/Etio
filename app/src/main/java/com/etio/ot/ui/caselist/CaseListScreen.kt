@@ -22,7 +22,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -30,8 +29,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.etio.ot.core.formatSignedMinutes
-import com.etio.ot.ui.checklist.ChecklistDialog
+import com.etio.ot.ui.checklist.ChecklistHost
 
+/**
+ * OWNER: spine branch.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CaseListScreen(
@@ -41,16 +43,7 @@ fun CaseListScreen(
     viewModel: CaseListViewModel = viewModel(factory = CaseListViewModel.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val checklistPrompt by viewModel.openChecklist.collectAsStateWithLifecycle()
-    val blocked by viewModel.blockedMessage.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
-
-    LaunchedEffect(blocked) {
-        blocked?.let {
-            snackbar.showSnackbar(it)
-            viewModel.clearBlockedMessage()
-        }
-    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
@@ -94,13 +87,13 @@ fun CaseListScreen(
                 CaseCard(
                     case = case,
                     metrics = state.metrics.forCase(case.id),
+                    events = state.eventsByCase[case.id].orEmpty(),
                     delays = state.delaysByCase[case.id].orEmpty(),
                     isActive = case.id == state.metrics.activeCaseId,
                     onMarkEvent = { type -> viewModel.markEvent(case.id, type) },
+                    onCorrectEvent = viewModel::correctEvent,
                     onCaptureDelay = { onCaptureDelay(case.id) },
                     onOpenDelay = onOpenMessages,
-                    onCorrectEvent = viewModel::correctEvent,
-                    events = state.eventsByCase[case.id].orEmpty(),
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -116,15 +109,6 @@ fun CaseListScreen(
         }
     }
 
-    checklistPrompt?.let { prompt ->
-        ChecklistDialog(
-            phase = prompt.phase,
-            items = prompt.items,
-            run = prompt.run,
-            onToggle = viewModel::toggleChecklistItem,
-            onComplete = viewModel::completeChecklist,
-            onSkip = viewModel::skipChecklist,
-            onDismiss = viewModel::dismissChecklist,
-        )
-    }
+    // The spine branch's entire contact with the WHO checklist.
+    ChecklistHost(viewModel.checklistGate, snackbar)
 }
