@@ -3,6 +3,7 @@ package com.etio.ot.ui.caselist
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -38,6 +39,9 @@ fun NextEventBar(
     onMark: (EventType) -> Unit,
     onOtherEvent: () -> Unit,
     modifier: Modifier = Modifier,
+    sendForLabel: String? = null,
+    onSendFor: () -> Unit = {},
+    onDismissSendFor: () -> Unit = {},
 ) {
     val haptics = LocalHapticFeedback.current
 
@@ -47,6 +51,39 @@ fun NextEventBar(
         modifier = modifier.fillMaxWidth(),
     ) {
         Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+
+            // The room is ready, so the only question left is whether to send for the
+            // next patient. One tap answers it; dismissing leaves the list untouched.
+            sendForLabel?.let { label ->
+                Surface(
+                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.16f),
+                    shape = MaterialTheme.shapes.small,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(start = 12.dp),
+                    ) {
+                        Text(
+                            label,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.weight(1f),
+                        )
+                        TextButton(onClick = onDismissSendFor) {
+                            Text("Not yet", style = MaterialTheme.typography.labelSmall)
+                        }
+                        TextButton(
+                            onClick = {
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onSendFor()
+                            },
+                        ) { Text("Send for") }
+                    }
+                }
+                Spacer(Modifier.padding(top = 8.dp))
+            }
+
             if (nextEvent != null) {
                 Button(
                     onClick = {

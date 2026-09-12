@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.etio.ot.core.formatSignedMinutes
+import com.etio.ot.domain.timing.DayFlow
 import com.etio.ot.domain.timing.TimerEngine
 import com.etio.ot.data.local.entity.EventEntity
 import com.etio.ot.data.model.EventSource
@@ -65,21 +66,31 @@ fun CaseListScreen(
     var showEventSheet by remember { mutableStateOf(false) }
     var editingEvent by remember { mutableStateOf<EventEntity?>(null) }
     val dismissedAssumptions = remember { mutableStateListOf<String>() }
+    val dismissedSendFor = remember { mutableStateListOf<String>() }
     val sheetState = rememberModalBottomSheetState()
 
     // Everything the bottom bar needs, derived from the same metrics the timers use.
+    // The sheet stays scoped to the active case; the primary button follows the day,
+    // so a finished case's room events are still one tap away after it completes.
     val activeCase = state.cases.firstOrNull { it.id == state.metrics.activeCaseId }
     val activeMarks = activeCase?.let { state.metrics.forCase(it.id)?.marks }.orEmpty()
-    val nextEvent = activeCase?.let { TimerEngine.nextExpectedEvent(activeMarks) }
+    val nextAction = DayFlow.nextAction(state.cases, state.metrics)
+    val sendFor = DayFlow.sendForOffer(state.cases, state.metrics)
+        ?.takeIf { it.caseId !in dismissedSendFor }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
             NextEventBar(
-                caseNumber = activeCase?.caseNumber,
-                nextEvent = nextEvent,
-                onMark = { type -> activeCase?.let { viewModel.markEvent(it.id, type) } },
+                caseNumber = nextAction?.caseNumber,
+                nextEvent = nextAction?.event,
+                onMark = { type -> nextAction?.let { viewModel.markEvent(it.caseId, type) } },
                 onOtherEvent = { showEventSheet = true },
+                sendForLabel = sendFor?.let { "Send for case ${it.caseNumber}?" },
+                onSendFor = {
+                    sendFor?.let { viewModel.markEvent(it.caseId, EventType.PATIENT_SENT_FOR) }
+                },
+                onDismissSendFor = { sendFor?.let { dismissedSendFor.add(it.caseId) } },
             )
         },
         topBar = {
@@ -174,7 +185,8 @@ fun CaseListScreen(
                 Spacer(Modifier.padding(top = 12.dp))
                 EventGrid(
                     marked = activeMarks,
-                    nextExpected = nextEvent ?: EventType.PATIENT_SENT_FOR,
+                    nextExpected = TimerEngine.nextExpectedEvent(activeMarks)
+                        ?: EventType.PATIENT_SENT_FOR,
                     onMark = { type ->
                         viewModel.markEvent(activeCase.id, type)
                         showEventSheet = false
