@@ -3,6 +3,7 @@ package com.etio.ot.di
 import com.etio.ot.data.config.ConfigProvider
 import com.etio.ot.data.local.EtioDatabase
 import com.etio.ot.data.repository.CaseRepository
+import com.etio.ot.data.settings.SettingsStore
 
 /**
  * OWNER: spine branch.
@@ -17,6 +18,9 @@ import com.etio.ot.data.repository.CaseRepository
 object CoreModule {
 
     val config: ConfigProvider by lazy { ConfigProvider(ServiceLocator.appContext) }
+
+    /** Theme choice and the tutorial flag — the two things a demo reset must not clear. */
+    val settingsStore: SettingsStore by lazy { SettingsStore(ServiceLocator.appContext) }
 
     val database: EtioDatabase by lazy { EtioDatabase.build(ServiceLocator.appContext) }
 

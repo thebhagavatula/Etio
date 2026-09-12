@@ -7,10 +7,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.etio.ot.data.settings.ThemeMode
+import com.etio.ot.di.CoreModule
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.etio.ot.ui.EtioApp
 import com.etio.ot.ui.theme.EtioTheme
@@ -31,7 +36,16 @@ class MainActivity : ComponentActivity() {
         micPermission.launch(Manifest.permission.RECORD_AUDIO)
 
         setContent {
-            EtioTheme {
+            // Persisted choice, or the system's, resolved before anything draws.
+            val mode by CoreModule.settingsStore.themeMode
+                .collectAsStateWithLifecycle(initialValue = ThemeMode.SYSTEM)
+            val dark = when (mode) {
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
+            }
+
+            EtioTheme(darkTheme = dark) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,

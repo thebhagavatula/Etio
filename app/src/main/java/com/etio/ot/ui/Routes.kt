@@ -17,6 +17,7 @@ object Routes {
     const val DELAY = "delay/{caseId}?autostart={autostart}"
     const val MESSAGES = "messages/{delayId}"
     const val REPORT = "report"
+    const val SETTINGS = "settings"
 
     const val ARG_CASE_ID = "caseId"
     const val ARG_DELAY_ID = "delayId"
