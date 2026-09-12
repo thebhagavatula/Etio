@@ -54,6 +54,7 @@ import com.etio.ot.data.model.EventType
 import com.etio.ot.ui.checklist.ChecklistHost
 import com.etio.ot.ui.events.EventGrid
 import com.etio.ot.ui.theme.Etio
+import com.etio.ot.ui.theme.backdropBlur
 import com.etio.ot.ui.theme.glass
 import com.etio.ot.ui.theme.rememberEtioHaptics
 
@@ -209,7 +210,12 @@ fun CaseListScreen(
         },
     ) { padding ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding),
+            // The only backdrop blur in the app: content we own, behind a sheet,
+            // API 31+, and off while either model job is running.
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .backdropBlur(active = showEventSheet),
             contentPadding = PaddingValues(
                 start = Etio.space.gutter,
                 end = Etio.space.gutter,

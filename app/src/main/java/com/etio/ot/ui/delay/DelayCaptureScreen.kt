@@ -8,36 +8,32 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -47,10 +43,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -60,8 +54,20 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.etio.ot.ai.LlmEngine
+import com.etio.ot.ui.theme.Etio
+import com.etio.ot.ui.theme.EtioMonoStyle
+import com.etio.ot.ui.theme.glass
+import com.etio.ot.ui.theme.rememberEtioHaptics
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * A sheet, not a page. It sits over the day rather than replacing it, because what
+ * happens here is an interruption to the list, not a departure from it.
+ *
+ * Glass is allowed on this surface — it is an overlay, and it carries none of the
+ * day's timers. The elapsed counter inside it is the exception that proves the rule:
+ * it sits on its own opaque block, because a number read from three metres cannot be
+ * asked to compete with whatever shows through.
+ */
 @Composable
 fun DelayCaptureScreen(
     caseId: String,
@@ -75,7 +81,7 @@ fun DelayCaptureScreen(
     val engineState by viewModel.engineState.collectAsStateWithLifecycle(LlmEngine.EngineState.NotLoaded)
     var typed by remember { mutableStateOf("") }
     var showTyped by remember { mutableStateOf(false) }
-    val haptics = LocalHapticFeedback.current
+    val haptics = rememberEtioHaptics()
     val mic = rememberMicPermission()
     val micUsable = mic.granted && state.micAvailable
 
@@ -83,112 +89,123 @@ fun DelayCaptureScreen(
     LaunchedEffect(micUsable) { if (!micUsable) showTyped = true }
 
     // The breach banner's mic tap continues here rather than asking for a second one.
-    // Once per arrival, and only if the mic is actually usable.
     var autoStarted by remember { mutableStateOf(false) }
     LaunchedEffect(autoStart, micUsable) {
         if (autoStart && micUsable && !autoStarted) {
             autoStarted = true
+            haptics.medium()
             viewModel.startListening()
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("Case ${state.caseNumber}", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            state.procedureName,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-            )
-        },
-    ) { padding ->
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Etio.colors.background.copy(alpha = 0.88f))
+            .clickable(enabled = state.phase == CapturePhase.IDLE, onClick = onBack),
+    ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState()),
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .glass(RoundedCornerShape(topStart = Etio.radius.sheet, topEnd = Etio.radius.sheet))
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = Etio.space.gutter)
+                .padding(bottom = Etio.space.xxl),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            Spacer(Modifier.height(Etio.space.m))
+            Box(
+                Modifier
+                    .width(36.dp)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(Etio.colors.textSecondary.copy(alpha = 0.4f)),
+            )
+            Spacer(Modifier.height(Etio.space.l))
 
-            // Engine banner — visible during the build, honest on stage.
-            when (val e = engineState) {
-                is LlmEngine.EngineState.Ready ->
-                    Banner("Model warm · ${e.backend} · ${e.loadMs} ms load", MaterialTheme.colorScheme.primary)
-                is LlmEngine.EngineState.Loading ->
-                    Banner(e.message, MaterialTheme.colorScheme.secondary)
-                is LlmEngine.EngineState.Failed ->
-                    Banner(
-                        "Model unavailable — capture still works, classification will be Other",
-                        MaterialTheme.colorScheme.error,
-                        actionLabel = "Try loading again",
-                        onAction = viewModel::retryModel,
-                    )
-                LlmEngine.EngineState.NotLoaded -> Unit
+            Text(
+                "CASE ${state.caseNumber} · ${state.procedureName}".uppercase(),
+                style = MaterialTheme.typography.labelLarge,
+                color = Etio.colors.textSecondary,
+                textAlign = TextAlign.Center,
+            )
+
+            if (engineState is LlmEngine.EngineState.Failed) {
+                Spacer(Modifier.height(Etio.space.m))
+                Notice(
+                    message = "Model unavailable — capture still works, classification will be Other",
+                    actionLabel = "Try loading again",
+                    onAction = viewModel::retryModel,
+                )
             }
 
-            Spacer(Modifier.padding(top = 12.dp))
+            Spacer(Modifier.height(Etio.space.gutter))
 
             when (state.phase) {
                 CapturePhase.IDLE, CapturePhase.LISTENING -> {
                     if (!mic.granted) {
-                        NoticeCard(
+                        Notice(
                             message = "Microphone access is off, so Etio can't hear the room. " +
                                 "You can still type what happened.",
                             actionLabel = if (mic.asked) "Open settings" else "Allow microphone",
                             onAction = mic.request,
                         )
                     } else if (!state.micAvailable) {
-                        NoticeCard(
+                        Notice(
                             message = "No offline speech recogniser on this phone. Install one in " +
                                 "Settings, or type what happened.",
                             actionLabel = "Check again",
                             onAction = viewModel::recheckMic,
                         )
+                    } else if (state.phase == CapturePhase.LISTENING) {
+                        RecordingPanel(
+                            elapsedSec = state.elapsedSec,
+                            level = state.level,
+                            onStop = {
+                                haptics.medium()
+                                viewModel.stopListening()
+                            },
+                        )
                     } else {
                         Text(
-                            text = when (state.phase) {
-                                CapturePhase.LISTENING -> "Listening…"
-                                else -> "Tap and say what's holding it up"
-                            },
+                            "Say what's holding it up",
                             style = MaterialTheme.typography.titleLarge,
                             textAlign = TextAlign.Center,
                         )
-                        Spacer(Modifier.padding(top = 24.dp))
-                        TalkButton(
-                            listening = state.phase == CapturePhase.LISTENING,
-                            level = state.level,
-                            onToggle = {
-                                // Fires on both edges — the toggle is the only entry point.
-                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        Spacer(Modifier.height(Etio.space.gutter))
+                        Button(
+                            onClick = {
+                                haptics.medium()
                                 viewModel.toggleListening()
                             },
-                        )
-                        if (state.phase == CapturePhase.LISTENING) {
-                            Spacer(Modifier.padding(top = 16.dp))
-                            RecordingReadout(elapsedSec = state.elapsedSec, level = state.level)
+                            shape = RoundedCornerShape(Etio.radius.pill),
+                            colors = ButtonDefaults.buttonColors(containerColor = Etio.colors.accent),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(64.dp),
+                        ) {
+                            Icon(Icons.Default.Mic, contentDescription = null)
+                            Spacer(Modifier.width(Etio.space.s))
+                            Text("Start recording", style = MaterialTheme.typography.titleMedium)
                         }
                     }
-                    Spacer(Modifier.padding(top = 20.dp))
+
+                    Spacer(Modifier.height(Etio.space.l))
                     if (state.transcript.isNotBlank()) {
                         TranscriptBlock(state.transcript)
                     }
                     state.error?.let {
-                        Spacer(Modifier.padding(top = 12.dp))
-                        Text(it, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
+                        Spacer(Modifier.height(Etio.space.m))
+                        Text(
+                            it,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = Etio.colors.delay,
+                            textAlign = TextAlign.Center,
+                        )
                     }
-                    Spacer(Modifier.padding(top = 12.dp))
+
+                    Spacer(Modifier.height(Etio.space.s))
                     TextButton(onClick = { showTyped = !showTyped }) {
                         Text(if (showTyped) "Hide typing" else "Type it instead")
                     }
@@ -207,13 +224,11 @@ fun DelayCaptureScreen(
                 }
 
                 CapturePhase.CLASSIFYING -> {
-                    // Transcript first, classification streams in behind it — perceived
-                    // latency is what matters (PRD §10).
                     TranscriptBlock(state.transcript)
-                    Spacer(Modifier.padding(top = 28.dp))
-                    CircularProgressIndicator()
-                    Spacer(Modifier.padding(top = 12.dp))
-                    Text("Reading that…", style = MaterialTheme.typography.bodyMedium)
+                    Spacer(Modifier.height(Etio.space.xl))
+                    CircularProgressIndicator(color = Etio.colors.accent)
+                    Spacer(Modifier.height(Etio.space.m))
+                    Text("Reading that…", style = MaterialTheme.typography.bodyLarge)
                 }
 
                 CapturePhase.REVIEW -> {
@@ -234,59 +249,112 @@ fun DelayCaptureScreen(
                 }
             }
 
-            Spacer(Modifier.padding(bottom = 32.dp))
+            Spacer(Modifier.height(Etio.space.l))
+            TextButton(onClick = onBack) { Text("Back to the list") }
         }
     }
 }
 
+/**
+ * Unmistakable from three metres: the seconds are the largest thing on the sheet, the
+ * bar moves with the room, and Stop is the only target.
+ *
+ * Opaque block, deliberately — a counter read across a theatre does not sit on glass.
+ */
 @Composable
-private fun Banner(
-    text: String,
-    color: androidx.compose.ui.graphics.Color,
-    actionLabel: String? = null,
-    onAction: (() -> Unit)? = null,
-) {
+private fun RecordingPanel(elapsedSec: Int, level: Float, onStop: () -> Unit) {
     Surface(
-        color = color.copy(alpha = 0.14f),
-        shape = MaterialTheme.shapes.small,
+        color = Etio.colors.surface,
+        shape = RoundedCornerShape(Etio.radius.card),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(
+            Modifier.padding(Etio.space.card),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text("RECORDING", style = MaterialTheme.typography.labelLarge, color = Etio.colors.delay)
+            Spacer(Modifier.height(Etio.space.s))
             Text(
-                text,
-                style = MaterialTheme.typography.labelSmall,
-                color = color,
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                "${elapsedSec}s",
+                style = MaterialTheme.typography.displaySmall,
+                color = Etio.colors.textPrimary,
             )
-            if (actionLabel != null && onAction != null) {
-                TextButton(onClick = onAction) {
-                    Text(actionLabel, style = MaterialTheme.typography.labelSmall, color = color)
-                }
+            Text(
+                "OF ${DelayCaptureViewModel.MAX_RECORDING_SEC}s",
+                style = MaterialTheme.typography.labelLarge,
+                color = Etio.colors.textSecondary,
+            )
+
+            Spacer(Modifier.height(Etio.space.l))
+            AmplitudeBar(level)
+            Spacer(Modifier.height(Etio.space.gutter))
+
+            Button(
+                onClick = onStop,
+                shape = RoundedCornerShape(Etio.radius.pill),
+                colors = ButtonDefaults.buttonColors(containerColor = Etio.colors.delay),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(64.dp),
+            ) {
+                Icon(Icons.Default.Stop, contentDescription = null)
+                Spacer(Modifier.width(Etio.space.s))
+                Text("Stop", style = MaterialTheme.typography.titleMedium)
             }
         }
     }
 }
 
 /**
- * A blocked path, said plainly, with the one thing that unblocks it. Same tinted
- * surface as [Banner] — this is not a separate error design, just a louder instance.
+ * A bar, not a waveform. It answers one question — is the microphone hearing you —
+ * and it is drawn straight from the smoothed level, with no animation of its own.
  */
 @Composable
-private fun NoticeCard(message: String, actionLabel: String, onAction: () -> Unit) {
+private fun AmplitudeBar(level: Float) {
+    val fraction = ((level + 2f) / 12f).coerceIn(0f, 1f)
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(10.dp)
+            .clip(RoundedCornerShape(5.dp))
+            .background(Etio.colors.textSecondary.copy(alpha = 0.25f)),
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth(fraction)
+                .fillMaxHeight()
+                .clip(RoundedCornerShape(5.dp))
+                .background(Etio.colors.running),
+        )
+    }
+}
+
+@Composable
+private fun TranscriptBlock(transcript: String) {
     Surface(
-        color = MaterialTheme.colorScheme.error.copy(alpha = 0.14f),
-        shape = MaterialTheme.shapes.medium,
+        color = Etio.colors.surface,
+        shape = RoundedCornerShape(Etio.radius.card),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(Modifier.padding(16.dp)) {
-            Text(
-                message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.error,
-            )
-            Spacer(Modifier.padding(top = 6.dp))
+        Column(Modifier.padding(Etio.space.l)) {
+            Text("HEARD", style = MaterialTheme.typography.labelLarge, color = Etio.colors.textSecondary)
+            Spacer(Modifier.height(Etio.space.xs))
+            Text(transcript, style = EtioMonoStyle)
+        }
+    }
+}
+
+/** A blocked path, said plainly, with the one thing that unblocks it. */
+@Composable
+private fun Notice(message: String, actionLabel: String, onAction: () -> Unit) {
+    Surface(
+        color = Etio.colors.delay.copy(alpha = 0.16f),
+        shape = RoundedCornerShape(Etio.radius.card),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(Etio.space.l)) {
+            Text(message, style = MaterialTheme.typography.bodyLarge, color = Etio.colors.delay)
+            Spacer(Modifier.height(Etio.space.s))
             TextButton(onClick = onAction) { Text(actionLabel) }
         }
     }
@@ -345,91 +413,3 @@ private fun Context.openAppSettings() {
         )
     }
 }
-
-@Composable
-private fun TranscriptBlock(transcript: String) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(Modifier.padding(14.dp)) {
-            Text(
-                "Heard",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.padding(top = 4.dp))
-            Text("“$transcript”", style = MaterialTheme.typography.bodyLarge)
-        }
-    }
-}
-
-/**
- * Tap to start, tap to stop. Toggle trades away the certainty of a held finger, so
- * the open mic has to be unmistakable: the button turns red and swaps to a stop
- * glyph, and [RecordingReadout] runs a counter and a live level underneath.
- */
-@Composable
-private fun TalkButton(
-    listening: Boolean,
-    level: Float,
-    onToggle: () -> Unit,
-) {
-    // RMS dB from SpeechRecognizer runs roughly -2..10; map to a gentle pulse.
-    val pulse = if (listening) 1f + (level.coerceIn(0f, 10f) / 40f) else 1f
-
-    Surface(
-        color = if (listening) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-        shape = CircleShape,
-        modifier = Modifier
-            .size(148.dp)
-            .scale(pulse)
-            .clickable(onClick = onToggle),
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                Icon(
-                    if (listening) Icons.Default.Stop else Icons.Default.Mic,
-                    contentDescription = if (listening) "Tap to stop" else "Tap to speak",
-                    modifier = Modifier.size(44.dp),
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                )
-                Spacer(Modifier.width(0.dp))
-            }
-        }
-    }
-}
-
-/**
- * The answer to "is it still listening?". Seconds elapsed against the hard cap, and
- * a bar that moves with the room — a still bar means the mic is hearing nothing.
- */
-@Composable
-private fun RecordingReadout(elapsedSec: Int, level: Float) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(
-            "● Recording ${elapsedSec.asClock()} / ${DelayCaptureViewModel.MAX_RECORDING_SEC.asClock()}",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.error,
-        )
-        Spacer(Modifier.padding(top = 8.dp))
-        LinearProgressIndicator(
-            // SpeechRecognizer reports RMS roughly -2..10 dB.
-            progress = { ((level + 2f) / 12f).coerceIn(0f, 1f) },
-            color = MaterialTheme.colorScheme.error,
-            modifier = Modifier.fillMaxWidth(0.6f),
-        )
-        Spacer(Modifier.padding(top = 4.dp))
-        Text(
-            "mic level",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-private fun Int.asClock(): String = "%d:%02d".format(this / 60, this % 60)

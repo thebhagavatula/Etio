@@ -13,6 +13,7 @@ import com.etio.ot.data.repository.CaseRepository
 import com.etio.ot.data.repository.DelayRepository
 import com.etio.ot.di.AiModule
 import com.etio.ot.di.CoreModule
+import com.etio.ot.ui.theme.InferenceSignal
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -176,7 +177,14 @@ class DelayCaptureViewModel(
         }
         viewModelScope.launch {
             _state.value = _state.value.copy(phase = CapturePhase.CLASSIFYING)
-            val record = delays.classify(caseId, transcript)
+            // Tells the glass layer to stop blurring for the duration. Job 1 gets the
+            // GPU to itself; nothing about the inference call changes.
+            InferenceSignal.classifyingStarted()
+            val record = try {
+                delays.classify(caseId, transcript)
+            } finally {
+                InferenceSignal.classifyingFinished()
+            }
             _state.value = _state.value.copy(phase = CapturePhase.REVIEW, record = record)
         }
     }

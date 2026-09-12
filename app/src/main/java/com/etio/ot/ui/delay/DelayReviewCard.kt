@@ -8,12 +8,19 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -26,19 +33,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.text.KeyboardOptions
 import com.etio.ot.data.local.entity.DelayRecordEntity
 import com.etio.ot.data.model.Avoidability
 import com.etio.ot.data.model.DelayCode
 import com.etio.ot.di.CoreModule
+import com.etio.ot.ui.theme.Etio
+import com.etio.ot.ui.theme.EtioMonoStyle
 
 /**
- * PRD §7 F4. Every model-assigned field is one tap from being corrected, and the
- * verbatim transcript sits underneath the whole card — not in a tooltip, not behind
- * a disclosure. That placement is the argument.
+ * The structured record, large and first; the words it came from, underneath in mono.
+ *
+ * That order is the argument: the fields are what you act on, the transcript is what
+ * proves them. Subordinate in weight, never hidden, never behind a disclosure.
+ * Every field carries its own edit affordance, so correcting one thing never means
+ * re-reading the rest.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -54,101 +64,103 @@ fun DelayReviewCard(
     onNotify: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var expandCodes by remember { mutableStateOf(false) }
-    var fixingTranscript by remember(record.id) { mutableStateOf(false) }
+    var editing by remember(record.id) { mutableStateOf<Field?>(null) }
     var transcriptDraft by remember(record.id) { mutableStateOf(record.transcriptRaw) }
     var noteDraft by remember(record.id) { mutableStateOf(record.note) }
     var estimateDraft by remember(record.id) { mutableStateOf(record.estimatedMin?.toString().orEmpty()) }
     val depts = remember { CoreModule.config.taxonomy().departmentHints }
 
-    Card(modifier = modifier) {
-        Column(Modifier.padding(16.dp)) {
+    Column(modifier) {
 
-            if (record.fellBackToOther) {
-                Surface(
-                    color = MaterialTheme.colorScheme.error.copy(alpha = 0.14f),
-                    shape = MaterialTheme.shapes.small,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        "Couldn't place this one — please pick the cause.",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+        if (record.fellBackToOther) {
+            Surface(
+                color = Etio.colors.delay.copy(alpha = 0.16f),
+                shape = RoundedCornerShape(Etio.radius.pill),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    "Couldn't place this one — pick the cause",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Etio.colors.delay,
+                    modifier = Modifier.padding(horizontal = Etio.space.m, vertical = Etio.space.s),
+                )
+            }
+            Spacer(Modifier.height(Etio.space.m))
+        }
+
+        Field(
+            label = "Cause",
+            value = record.code.display,
+            onEdit = { editing = if (editing == Field.CODE) null else Field.CODE },
+        )
+        if (editing == Field.CODE) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(Etio.space.s)) {
+                DelayCode.entries.forEach { code ->
+                    FilterChip(
+                        selected = code == record.code,
+                        onClick = { onCodeChange(code); editing = null },
+                        label = { Text(code.display, style = MaterialTheme.typography.labelLarge) },
                     )
                 }
-                Spacer(Modifier.padding(top = 10.dp))
             }
+        }
 
-            // --- cause ---
-            FieldLabel("Cause")
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    record.code.display,
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-                Spacer(Modifier.weight(1f))
-                TextButton(onClick = { expandCodes = !expandCodes }) {
-                    Text(if (expandCodes) "Close" else "Change")
-                }
-            }
-            if (expandCodes) {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    DelayCode.entries.forEach { code ->
-                        FilterChip(
-                            selected = code == record.code,
-                            onClick = { onCodeChange(code); expandCodes = false },
-                            label = { Text(code.display, style = MaterialTheme.typography.labelSmall) },
-                        )
-                    }
-                }
-            }
-
-            Spacer(Modifier.padding(top = 12.dp))
-
-            // --- department ---
-            FieldLabel("Department")
+        Field(
+            label = "Department",
+            value = record.attributedDept.ifBlank { "—" },
+            onEdit = { editing = if (editing == Field.DEPT) null else Field.DEPT },
+        )
+        if (editing == Field.DEPT) {
             Row(
                 Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(Etio.space.s),
             ) {
                 depts.forEach { dept ->
                     FilterChip(
                         selected = dept.equals(record.attributedDept, ignoreCase = true),
-                        onClick = { onDeptChange(dept) },
-                        label = { Text(dept, style = MaterialTheme.typography.labelSmall) },
+                        onClick = { onDeptChange(dept); editing = null },
+                        label = { Text(dept, style = MaterialTheme.typography.labelLarge) },
                     )
                 }
             }
+        }
 
-            Spacer(Modifier.padding(top = 12.dp))
-
-            // --- avoidability ---
-            FieldLabel("Avoidable?")
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Field(
+            label = "Avoidable",
+            value = when (record.avoidable) {
+                Avoidability.AVOIDABLE -> "Yes"
+                Avoidability.UNAVOIDABLE -> "No"
+                Avoidability.UNCLEAR -> "Unclear"
+            },
+            onEdit = { editing = if (editing == Field.AVOIDABLE) null else Field.AVOIDABLE },
+        )
+        if (editing == Field.AVOIDABLE) {
+            Row(horizontalArrangement = Arrangement.spacedBy(Etio.space.s)) {
                 Avoidability.entries.forEach { value ->
                     FilterChip(
                         selected = value == record.avoidable,
-                        onClick = { onAvoidableChange(value) },
+                        onClick = { onAvoidableChange(value); editing = null },
                         label = {
                             Text(
                                 when (value) {
-                                    Avoidability.AVOIDABLE -> "Avoidable"
-                                    Avoidability.UNAVOIDABLE -> "Unavoidable"
+                                    Avoidability.AVOIDABLE -> "Yes"
+                                    Avoidability.UNAVOIDABLE -> "No"
                                     Avoidability.UNCLEAR -> "Unclear"
                                 },
-                                style = MaterialTheme.typography.labelSmall,
+                                style = MaterialTheme.typography.labelLarge,
                             )
                         },
                     )
                 }
             }
+        }
 
-            Spacer(Modifier.padding(top = 12.dp))
-
-            // --- ETA ---
-            FieldLabel("Expected delay (only if it was said)")
+        Field(
+            label = "Expected delay",
+            value = record.estimatedMin?.let { "$it min" } ?: "Not stated",
+            onEdit = { editing = if (editing == Field.ETA) null else Field.ETA },
+        )
+        if (editing == Field.ETA) {
             OutlinedTextField(
                 value = estimateDraft,
                 onValueChange = {
@@ -160,83 +172,102 @@ fun DelayReviewCard(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
             )
+        }
 
-            Spacer(Modifier.padding(top = 12.dp))
-
-            // --- note ---
-            FieldLabel("Note")
+        Field(
+            label = "Note",
+            value = record.note.ifBlank { "—" },
+            onEdit = { editing = if (editing == Field.NOTE) null else Field.NOTE },
+        )
+        if (editing == Field.NOTE) {
             OutlinedTextField(
                 value = noteDraft,
                 onValueChange = { noteDraft = it; onNoteChange(it) },
                 modifier = Modifier.fillMaxWidth(),
             )
+        }
 
-            Spacer(Modifier.padding(top = 14.dp))
+        Spacer(Modifier.height(Etio.space.gutter))
 
-            // --- grounding evidence, always visible ---
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                shape = MaterialTheme.shapes.medium,
+        // The evidence. Mono, secondary, and always on screen.
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "WHAT WAS SAID",
+                style = MaterialTheme.typography.labelLarge,
+                color = Etio.colors.textSecondary,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = { editing = if (editing == Field.TRANSCRIPT) null else Field.TRANSCRIPT }) {
+                Text(if (editing == Field.TRANSCRIPT) "Cancel" else "Fix wording")
+            }
+        }
+        if (editing == Field.TRANSCRIPT) {
+            OutlinedTextField(
+                value = transcriptDraft,
+                onValueChange = { transcriptDraft = it },
+                textStyle = EtioMonoStyle,
                 modifier = Modifier.fillMaxWidth(),
-            ) {
-                Column(Modifier.padding(12.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            "What was actually said",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(Modifier.weight(1f))
-                        TextButton(onClick = { fixingTranscript = !fixingTranscript }) {
-                            Text(if (fixingTranscript) "Cancel" else "Fix wording")
-                        }
-                    }
-                    Spacer(Modifier.padding(top = 4.dp))
-                    if (fixingTranscript) {
-                        // Correcting the words re-runs Job 1 — the card's fields have to
-                        // keep following from the transcript printed beneath them.
-                        OutlinedTextField(
-                            value = transcriptDraft,
-                            onValueChange = { transcriptDraft = it },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        TextButton(
-                            onClick = {
-                                fixingTranscript = false
-                                onTranscriptCorrected(transcriptDraft)
-                            },
-                            enabled = transcriptDraft.isNotBlank() &&
-                                transcriptDraft != record.transcriptRaw,
-                        ) { Text("Re-read that") }
-                    } else {
-                        Text("“${record.transcriptRaw}”", style = MaterialTheme.typography.bodyMedium)
-                    }
-                    Spacer(Modifier.padding(top = 6.dp))
-                    Text(
-                        "confidence ${"%.2f".format(record.modelConfidence)}" +
-                            if (record.userEdited) " · edited" else "",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
+            )
+            TextButton(
+                onClick = { editing = null; onTranscriptCorrected(transcriptDraft) },
+                enabled = transcriptDraft.isNotBlank() && transcriptDraft != record.transcriptRaw,
+            ) { Text("Re-read that") }
+        } else {
+            Text(
+                record.transcriptRaw,
+                style = EtioMonoStyle,
+                color = Etio.colors.textSecondary,
+            )
+        }
 
-            Spacer(Modifier.padding(top = 16.dp))
+        Spacer(Modifier.height(Etio.space.s))
+        Text(
+            "CONFIDENCE ${"%.2f".format(record.modelConfidence)}" +
+                if (record.userEdited) " · EDITED" else "",
+            style = MaterialTheme.typography.labelLarge,
+            color = Etio.colors.textSecondary,
+        )
 
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                TextButton(onClick = onDiscard) { Text("Discard") }
-                Spacer(Modifier.weight(1f))
-                Button(onClick = onNotify) { Text("Notify") }
-            }
+        Spacer(Modifier.height(Etio.space.gutter))
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(Etio.space.m),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TextButton(onClick = onDiscard) { Text("Discard") }
+            Spacer(Modifier.weight(1f))
+            Button(
+                onClick = onNotify,
+                shape = RoundedCornerShape(Etio.radius.pill),
+                colors = ButtonDefaults.buttonColors(containerColor = Etio.colors.accent),
+                modifier = Modifier.height(56.dp),
+            ) { Text("Notify", style = MaterialTheme.typography.titleMedium) }
         }
     }
 }
 
+private enum class Field { CODE, DEPT, AVOIDABLE, ETA, NOTE, TRANSCRIPT }
+
+/** Label above, value large, and a 44dp edit target that never moves. */
 @Composable
-private fun FieldLabel(text: String) {
-    Text(
-        text,
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
+private fun Field(label: String, value: String, onEdit: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                label.uppercase(),
+                style = MaterialTheme.typography.labelLarge,
+                color = Etio.colors.textSecondary,
+            )
+            Text(value, style = MaterialTheme.typography.titleLarge)
+        }
+        IconButton(onClick = onEdit, modifier = Modifier.size(44.dp)) {
+            Icon(
+                Icons.Default.Edit,
+                contentDescription = "Edit $label",
+                tint = Etio.colors.accent,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
+    Spacer(Modifier.height(Etio.space.m))
 }
