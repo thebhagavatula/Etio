@@ -101,12 +101,26 @@ fun DelayCaptureScreen(
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Etio.colors.background.copy(alpha = 0.88f))
-            .clickable(enabled = state.phase == CapturePhase.IDLE, onClick = onBack),
-    ) {
+    Box(Modifier.fillMaxSize()) {
+
+        // The scrim is a sibling of the sheet, not its parent. Wrapping the sheet in a
+        // clickable merges the whole subtree into one semantics node: a screen reader
+        // then announces the sheet as a single element, the buttons inside stop being
+        // separately focusable, and a tap aimed at one of them dismisses the sheet
+        // instead. Behaviour is unchanged — tapping outside still closes it while idle.
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(Etio.colors.background.copy(alpha = 0.88f))
+                .then(
+                    if (state.phase == CapturePhase.IDLE) {
+                        Modifier.clickable(onClick = onBack)
+                    } else {
+                        Modifier
+                    },
+                ),
+        )
+
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)

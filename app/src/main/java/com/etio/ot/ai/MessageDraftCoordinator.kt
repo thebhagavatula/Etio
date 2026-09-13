@@ -4,6 +4,7 @@ import android.util.Log
 import com.etio.ot.data.local.entity.DelayRecordEntity
 import com.etio.ot.data.model.Audience
 import com.etio.ot.data.repository.DelayRepository
+import com.etio.ot.ui.theme.InferenceSignal
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
@@ -42,6 +43,9 @@ class MessageDraftCoordinator(
 
         _pending.value = _pending.value + (record.id to Audience.demoOrder.toSet())
         jobs[record.id] = scope.launch {
+            // Tells the glass layer to stop blurring for the duration, the same way
+            // Job 1 does. Counted, so overlapping records cannot clear each other's.
+            InferenceSignal.draftingStarted()
             runCatching {
                 delays.draftMessages(record).collect { row ->
                     _pending.value = _pending.value +
@@ -49,6 +53,7 @@ class MessageDraftCoordinator(
                 }
             }.onFailure { Log.e(TAG, "Background drafting failed for ${record.id}", it) }
 
+            InferenceSignal.draftingFinished()
             synchronized(this@MessageDraftCoordinator) {
                 _pending.value = _pending.value - record.id
                 jobs.remove(record.id)

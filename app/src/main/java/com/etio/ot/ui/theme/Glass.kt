@@ -15,12 +15,12 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.etio.ot.di.AiModule
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 
 /**
  * Glass is an accent on chrome, not a theme.
@@ -34,10 +34,10 @@ import kotlinx.coroutines.flow.map
 /**
  * Inference in flight, from the two places that already know.
  *
- * Job 1 raises [classifying] from the capture ViewModel; Job 2 is visible in the
- * draft coordinator's pending set. Neither is new state and neither touches the
- * inference path — the point is only that the GPU is not asked to blur a backdrop
- * while it is decoding tokens.
+ * Job 1 raises [classifying] from the capture ViewModel; Job 2 raises the drafting
+ * count from the coordinator. Both are pushed in by the code doing the work, and
+ * neither touches the inference path — the point is only that the GPU is not asked to
+ * blur a backdrop while it is decoding tokens.
  */
 object InferenceSignal {
 
@@ -47,13 +47,27 @@ object InferenceSignal {
     fun classifyingStarted() { _classifying.value = true }
     fun classifyingFinished() { _classifying.value = false }
 
-    /** True while either job is running. */
-    val active: kotlinx.coroutines.flow.Flow<Boolean> by lazy {
-        combine(
-            _classifying,
-            AiModule.draftCoordinator.pending.map { it.isNotEmpty() },
-        ) { job1, job2 -> job1 || job2 }
-    }
+    /**
+     * Drafting runs are counted rather than flagged: two delay records can be in
+     * flight at once, and the first one to finish must not switch the blur back on
+     * while the second is still decoding.
+     */
+    private val _draftingRuns = MutableStateFlow(0)
+
+    fun draftingStarted() = _draftingRuns.update { it + 1 }
+    fun draftingFinished() = _draftingRuns.update { (it - 1).coerceAtLeast(0) }
+
+    /**
+     * True while either job is running.
+     *
+     * Both halves are pushed in by whoever is doing the work. This used to reach into
+     * AiModule for the drafting half, which meant that reading it — from a glass
+     * surface, during composition — built the LLM engine and the database. A theme
+     * helper is the last thing that should be constructing the DI graph, and it put
+     * every screen out of reach of a UI test.
+     */
+    val active: Flow<Boolean> =
+        combine(_classifying, _draftingRuns) { job1, drafting -> job1 || drafting > 0 }
 }
 
 /**
