@@ -67,6 +67,9 @@ android {
     testOptions {
         unitTests {
             isReturnDefaultValues = true
+            // Robolectric renders the real composables, so it needs the real resources
+            // and assets — the review card reads the taxonomy out of assets/config.
+            isIncludeAndroidResources = true
         }
     }
 }
@@ -105,6 +108,14 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+
+    // Compose UI under test on the JVM: Robolectric supplies the Android runtime,
+    // ui-test-junit4 drives the tree. Keeps the UI suite in the same `test` source set
+    // as everything else, so one command runs the lot.
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    testImplementation(libs.robolectric)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
