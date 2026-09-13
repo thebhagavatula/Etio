@@ -15,6 +15,22 @@ private val Context.etioDataStore by preferencesDataStore(name = "etio_settings"
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
 /**
+ * What the app actually reads and writes. [SettingsStore] is the DataStore-backed
+ * implementation; depending on this instead lets a ViewModel be built in a JVM test,
+ * where there is no Context and no file to write to.
+ */
+interface AppSettings {
+    val themeMode: Flow<ThemeMode>
+    suspend fun setThemeMode(mode: ThemeMode)
+
+    val tutorialCompleted: Flow<Boolean>
+    suspend fun setTutorialCompleted(completed: Boolean)
+
+    val splashDurationMs: Flow<Long?>
+    suspend fun setSplashDurationMs(ms: Long?)
+}
+
+/**
  * The two pieces of state that belong to the person rather than to the day: which
  * theme they picked, and whether they have been through the tutorial.
  *
@@ -22,20 +38,20 @@ enum class ThemeMode { SYSTEM, LIGHT, DARK }
  * these should come back with it — least of all the tutorial flag, which must never
  * re-fire on stage.
  */
-class SettingsStore(private val context: Context) {
+class SettingsStore(private val context: Context) : AppSettings {
 
-    val themeMode: Flow<ThemeMode> = context.etioDataStore.data.map { prefs ->
+    override val themeMode: Flow<ThemeMode> = context.etioDataStore.data.map { prefs ->
         prefs[KEY_THEME]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() } ?: ThemeMode.SYSTEM
     }
 
-    suspend fun setThemeMode(mode: ThemeMode) {
+    override suspend fun setThemeMode(mode: ThemeMode) {
         context.etioDataStore.edit { it[KEY_THEME] = mode.name }
     }
 
-    val tutorialCompleted: Flow<Boolean> =
+    override val tutorialCompleted: Flow<Boolean> =
         context.etioDataStore.data.map { it[KEY_TUTORIAL] ?: false }
 
-    suspend fun setTutorialCompleted(completed: Boolean) {
+    override suspend fun setTutorialCompleted(completed: Boolean) {
         context.etioDataStore.edit { it[KEY_TUTORIAL] = completed }
     }
 
@@ -45,9 +61,9 @@ class SettingsStore(private val context: Context) {
      * Here rather than in a build constant because the one moment you want it shorter
      * is the one moment you cannot rebuild: standing at the podium, about to present.
      */
-    val splashDurationMs: Flow<Long?> = context.etioDataStore.data.map { it[KEY_SPLASH_MS] }
+    override val splashDurationMs: Flow<Long?> = context.etioDataStore.data.map { it[KEY_SPLASH_MS] }
 
-    suspend fun setSplashDurationMs(ms: Long?) {
+    override suspend fun setSplashDurationMs(ms: Long?) {
         context.etioDataStore.edit { prefs ->
             if (ms == null) prefs.remove(KEY_SPLASH_MS) else prefs[KEY_SPLASH_MS] = ms
         }

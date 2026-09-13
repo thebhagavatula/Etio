@@ -6,7 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.etio.ot.core.newId
 import com.etio.ot.data.local.entity.CaseEntity
 import com.etio.ot.data.repository.CaseRepository
-import com.etio.ot.data.settings.SettingsStore
+import com.etio.ot.core.Clock
+import com.etio.ot.data.local.dao.CaseDao
+import com.etio.ot.data.settings.AppSettings
 import com.etio.ot.di.CoreModule
 import com.etio.ot.di.ServiceLocator
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,7 +30,14 @@ import kotlinx.coroutines.launch
  */
 class TutorialViewModel(
     private val cases: CaseRepository = CoreModule.caseRepository,
-    private val settings: SettingsStore = CoreModule.settingsStore,
+    private val settings: AppSettings = CoreModule.settingsStore,
+    /**
+     * The sandbox writes a case directly, so the DAO is a dependency rather than
+     * something reached for mid-method — otherwise the tutorial's step machine cannot
+     * be exercised without a real database behind it.
+     */
+    private val caseDao: CaseDao = CoreModule.database.caseDao(),
+    private val clock: Clock = ServiceLocator.clock,
 ) : ViewModel() {
 
     private val _step = MutableStateFlow(TutorialStep.WELCOME)
@@ -57,7 +66,7 @@ class TutorialViewModel(
     fun startSandbox() {
         if (_sandboxCaseId.value != null) return
         viewModelScope.launch {
-            val dao = CoreModule.database.caseDao()
+            val dao = caseDao
             dao.clear()
             val id = newId()
             dao.upsert(
@@ -67,7 +76,7 @@ class TutorialViewModel(
                     theatreId = "OT1",
                     procedureName = "Demo Case",
                     surgeon = "Dr Placeholder",
-                    scheduledStartMs = ServiceLocator.clock.nowMs(),
+                    scheduledStartMs = clock.nowMs(),
                     scheduledDurationMin = 45,
                     orderIndex = 0,
                 ),

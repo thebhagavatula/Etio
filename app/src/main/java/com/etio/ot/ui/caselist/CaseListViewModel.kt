@@ -8,9 +8,11 @@ import com.etio.ot.data.local.entity.DelayRecordEntity
 import com.etio.ot.data.local.entity.EventEntity
 import com.etio.ot.data.model.EventType
 import com.etio.ot.data.repository.CaseRepository
+import com.etio.ot.data.repository.ChecklistRepository
 import com.etio.ot.data.repository.DelayRepository
 import com.etio.ot.di.AiModule
 import com.etio.ot.di.CoreModule
+import com.etio.ot.di.SafetyModule
 import com.etio.ot.domain.timing.DayMetrics
 import com.etio.ot.domain.timing.ScheduleProjector
 import com.etio.ot.domain.timing.TimerEngine
@@ -36,9 +38,16 @@ import kotlinx.coroutines.launch
 class CaseListViewModel(
     private val cases: CaseRepository = CoreModule.caseRepository,
     private val delays: DelayRepository = AiModule.delayRepository,
+    /**
+     * Injectable so the screen's state can be tested at all: the default reaches
+     * SafetyModule, which reaches the Room database, which needs an Android Context —
+     * one default argument was the difference between this ViewModel being testable
+     * and not. The default is unchanged for the app.
+     */
+    checklists: ChecklistRepository = SafetyModule.checklistRepository,
 ) : ViewModel() {
 
-    val checklistGate = ChecklistGateController(scope = viewModelScope)
+    val checklistGate = ChecklistGateController(scope = viewModelScope, checklists = checklists)
 
     private val ticker = flow {
         while (true) {

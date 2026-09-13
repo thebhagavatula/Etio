@@ -1,6 +1,7 @@
 package com.etio.ot.di
 
 import com.etio.ot.data.config.ConfigProvider
+import com.etio.ot.data.config.asSeedSource
 import com.etio.ot.data.local.EtioDatabase
 import com.etio.ot.data.repository.CaseRepository
 import com.etio.ot.data.settings.SettingsStore
@@ -28,7 +29,7 @@ object CoreModule {
         CaseRepository(
             caseDao = database.caseDao(),
             eventDao = database.eventDao(),
-            config = config,
+            config = config.asSeedSource(),
             clock = ServiceLocator.clock,
         )
     }

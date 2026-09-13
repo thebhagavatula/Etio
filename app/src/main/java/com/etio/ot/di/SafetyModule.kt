@@ -1,5 +1,6 @@
 package com.etio.ot.di
 
+import com.etio.ot.data.config.asChecklistSource
 import com.etio.ot.data.repository.ChecklistRepository
 
 /**
@@ -14,7 +15,7 @@ object SafetyModule {
     val checklistRepository: ChecklistRepository by lazy {
         ChecklistRepository(
             dao = CoreModule.database.checklistRunDao(),
-            config = CoreModule.config,
+            config = CoreModule.config.asChecklistSource(),
             clock = ServiceLocator.clock,
         )
     }

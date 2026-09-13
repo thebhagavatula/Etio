@@ -2,7 +2,7 @@ package com.etio.ot.data.repository
 
 import com.etio.ot.core.Clock
 import com.etio.ot.core.newId
-import com.etio.ot.data.config.ConfigProvider
+import com.etio.ot.data.config.SeedSource
 import com.etio.ot.data.local.dao.CaseDao
 import com.etio.ot.data.local.dao.EventDao
 import com.etio.ot.data.local.entity.CaseEntity
@@ -22,7 +22,7 @@ data class MarkResult(val event: EventEntity, val inferred: List<EventEntity>)
 class CaseRepository(
     private val caseDao: CaseDao,
     private val eventDao: EventDao,
-    private val config: ConfigProvider,
+    private val config: SeedSource,
     private val clock: Clock = Clock.System,
 ) {
 

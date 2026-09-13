@@ -4,7 +4,7 @@ import android.util.Log
 import com.etio.ot.core.Clock
 import com.etio.ot.core.newId
 import com.etio.ot.data.config.ChecklistItem
-import com.etio.ot.data.config.ConfigProvider
+import com.etio.ot.data.config.ChecklistSource
 import com.etio.ot.data.local.dao.ChecklistRunDao
 import com.etio.ot.data.local.entity.ChecklistRunEntity
 import com.etio.ot.data.model.ChecklistPhase
@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.catch
 
 class ChecklistRepository(
     private val dao: ChecklistRunDao,
-    private val config: ConfigProvider,
+    private val config: ChecklistSource,
     private val clock: Clock = Clock.System,
 ) {
     private val tag = "ChecklistRepository"
